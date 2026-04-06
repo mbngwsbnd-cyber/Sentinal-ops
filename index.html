@@ -1,0 +1,1909 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<meta name="theme-color" content="#1a2744"/>
+<meta name="apple-mobile-web-app-capable" content="yes"/>
+<meta name="mobile-web-app-capable" content="yes"/>
+<meta name="apple-mobile-web-app-title" content="Sentinel Ops"/>
+<link rel="manifest" href="./manifest.json"/>
+<title>Sentinel Ops</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+:root{
+  --bg:#07111f;--bg2:#0d1a2e;--bg3:#132240;
+  --border:#1e3a5f;--border2:#2a4a70;
+  --accent:#2563eb;--accent2:#3b82f6;--accent3:#60a5fa;
+  --green:#22c55e;--yellow:#f59e0b;--red:#ef4444;
+  --purple:#8b5cf6;--cyan:#06b6d4;--orange:#f97316;
+  --text:#e2e8f0;--text2:#94a3b8;--text3:#475569;
+  --gold:#fbbf24;
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%;min-height:100vh;overflow-x:hidden}
+body{background:var(--bg);color:var(--text);font-family:"Segoe UI",system-ui,sans-serif;font-size:14px}
+::-webkit-scrollbar{width:5px}
+::-webkit-scrollbar-track{background:var(--bg)}
+::-webkit-scrollbar-thumb{background:var(--border);border-radius:4px}
+
+/* ── SPLASH ── */
+#splash{position:fixed;inset:0;background:var(--bg);display:flex;flex-direction:column;align-items:center;justify-content:center;z-index:9999;transition:opacity .7s}
+#splash.out{opacity:0;pointer-events:none}
+.sp-ring{width:90px;height:90px;border-radius:50%;border:3px solid var(--border);border-top:3px solid var(--accent2);animation:spin 1s linear infinite;margin-bottom:24px}
+@keyframes spin{to{transform:rotate(360deg)}}
+.sp-logo{position:absolute;font-size:32px;animation:pulse 2s ease infinite}
+@keyframes pulse{0%,100%{transform:scale(1)}50%{transform:scale(1.1)}}
+.sp-title{font-size:28px;font-weight:800;letter-spacing:3px;color:#fff;margin-bottom:8px}
+.sp-sub{font-size:11px;color:var(--accent3);letter-spacing:3px;text-transform:uppercase}
+.sp-bar{width:200px;height:2px;background:var(--border);border-radius:2px;margin-top:28px;overflow:hidden}
+.sp-fill{height:100%;width:0;background:linear-gradient(90deg,var(--accent),var(--accent3));animation:fill 2s ease forwards}
+@keyframes fill{to{width:100%}}
+
+/* ── AUTH ── */
+#auth{display:none;min-height:100vh;align-items:center;justify-content:center;padding:20px;
+  background:radial-gradient(ellipse at 20% 50%,#0f2040 0%,var(--bg) 70%)}
+.a-card{background:var(--bg2);border:1px solid var(--border);border-radius:20px;padding:36px;width:100%;max-width:440px;max-height:94vh;overflow-y:auto}
+.a-logo{display:flex;align-items:center;gap:12px;margin-bottom:20px}
+.a-logo-icon{width:46px;height:46px;border-radius:12px;background:linear-gradient(135deg,var(--accent),var(--accent2));display:flex;align-items:center;justify-content:center;font-size:22px;flex-shrink:0;overflow:hidden}
+.a-logo-icon img{width:100%;height:100%;object-fit:cover;border-radius:12px}
+.a-org-name{font-size:18px;font-weight:800;letter-spacing:1px;color:#fff}
+.a-org-tag{font-size:10px;color:var(--accent3);letter-spacing:2px;text-transform:uppercase}
+.a-title{font-size:20px;font-weight:700;color:#fff;margin-bottom:4px}
+.a-sub{font-size:12px;color:var(--text3);margin-bottom:18px}
+.a-tabs{display:flex;background:#060e1a;border-radius:10px;padding:3px;gap:3px;margin-bottom:16px}
+.a-tab{flex:1;padding:8px;border-radius:8px;border:none;cursor:pointer;font-family:inherit;font-size:12px;font-weight:700;background:transparent;color:var(--text3);transition:all .2s}
+.a-tab.on{background:linear-gradient(135deg,var(--accent),var(--accent2));color:#fff}
+.a-field{margin-bottom:12px}
+.a-field label{font-size:10px;color:var(--text3);letter-spacing:.7px;text-transform:uppercase;margin-bottom:5px;display:block}
+.a-field input,.a-field select{width:100%;padding:10px 12px;border-radius:9px;border:1px solid var(--border);background:#060e1a;color:var(--text);font-family:inherit;font-size:13px;outline:none;transition:border-color .2s}
+.a-field input:focus,.a-field select:focus{border-color:var(--accent2)}
+.a-field input::placeholder{color:var(--text3)}
+#org-dropdown,#org-dropdown-reg{scrollbar-width:thin;scrollbar-color:var(--border) transparent}
+.a-row{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.a-btn{width:100%;padding:12px;border-radius:10px;border:none;cursor:pointer;font-family:inherit;font-size:14px;font-weight:700;background:linear-gradient(135deg,var(--accent),var(--accent2));color:#fff;margin-top:6px;transition:opacity .2s}
+.a-btn:hover{opacity:.9}
+.a-btn:disabled{opacity:.4;cursor:not-allowed}
+.a-err{background:#7f1d1d22;border:1px solid #ef444466;color:#fca5a5;padding:9px 12px;border-radius:8px;font-size:12px;margin-bottom:12px;display:none}
+.a-ok{background:#14532d22;border:1px solid #22c55e66;color:#86efac;padding:9px 12px;border-radius:8px;font-size:12px;margin-bottom:12px;display:none}
+.a-link{text-align:center;margin-top:12px;font-size:12px;color:var(--text3)}
+.a-link span{color:var(--accent3);cursor:pointer;font-weight:600}
+/* type cards */
+.type-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:4px}
+.type-card{padding:12px 8px;border-radius:10px;border:2px solid var(--border);background:transparent;cursor:pointer;text-align:center;transition:all .2s;user-select:none}
+.type-card:hover{border-color:var(--border2);background:var(--bg3)}
+.type-card.on{border-color:var(--accent2);background:#2563eb22;box-shadow:0 0 0 1px var(--accent2)33}
+.type-card.on .tn{color:var(--accent3)}
+.type-card .ti{font-size:22px;margin-bottom:5px}
+.type-card .tn{font-size:11px;font-weight:700;color:var(--text2);transition:color .2s}
+.type-card .td{font-size:9px;color:var(--text3);margin-top:2px}
+/* code */
+.code-box{background:#060e1a;border:2px solid var(--accent2);border-radius:14px;padding:18px;text-align:center;margin:12px 0}
+.code-digits{font-family:"Courier New",monospace;font-size:38px;font-weight:800;letter-spacing:8px;color:var(--accent3)}
+.code-inputs{display:flex;gap:6px;justify-content:center;margin:12px 0}
+.code-in{width:42px;height:50px;border-radius:9px;border:1px solid var(--border);background:#060e1a;color:#fff;font-family:"Courier New",monospace;font-size:20px;font-weight:700;text-align:center;outline:none}
+.code-in:focus{border-color:var(--accent2)}
+.timer{font-size:11px;color:var(--yellow);font-weight:700}
+
+/* ── APP ── */
+#app{display:none}
+#topbar{background:linear-gradient(90deg,var(--bg2),#0f2040);border-bottom:1px solid var(--border);padding:0 20px;height:58px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:100;gap:10px}
+#logo{display:flex;align-items:center;gap:10px;cursor:pointer;flex-shrink:0}
+.tb-logo-img{width:32px;height:32px;border-radius:8px;background:linear-gradient(135deg,var(--accent),var(--accent2));display:flex;align-items:center;justify-content:center;font-size:16px;overflow:hidden;flex-shrink:0}
+.tb-logo-img img{width:100%;height:100%;object-fit:cover}
+.tb-org{font-size:14px;font-weight:800;letter-spacing:.8px;color:#fff}
+.tb-sub{font-size:9px;color:var(--text3);letter-spacing:2px;text-transform:uppercase}
+#nav{display:flex;gap:2px;flex-wrap:wrap;overflow-x:auto}
+.nb{padding:6px 12px;border-radius:7px;border:none;cursor:pointer;font-family:inherit;font-size:11px;font-weight:600;background:transparent;color:var(--text3);border-bottom:2px solid transparent;transition:all .2s;white-space:nowrap}
+.nb.on{background:rgba(37,99,235,.15);color:var(--accent3);border-bottom:2px solid var(--accent2)}
+#tbr{display:flex;align-items:center;gap:8px;flex-shrink:0}
+#clock{font-family:"Courier New",monospace;font-size:10px;color:var(--text3);white-space:nowrap}
+.bell{position:relative;cursor:pointer;padding:5px 9px;border-radius:7px;border:1px solid transparent;font-size:14px;transition:all .2s}
+.bell.has-notif{border-color:var(--yellow)44;background:#f59e0b11}
+.bell-badge{position:absolute;top:-2px;right:-2px;background:var(--red);color:#fff;border-radius:8px;font-size:9px;font-weight:700;padding:1px 5px;min-width:16px;text-align:center}
+.uchip{display:flex;align-items:center;gap:7px;background:var(--bg2);border:1px solid var(--border);border-radius:18px;padding:4px 10px 4px 5px;cursor:pointer}
+.uchip:hover{border-color:var(--accent2)}
+.uav{width:24px;height:24px;border-radius:7px;background:linear-gradient(135deg,var(--accent),var(--accent2));display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;color:#fff}
+.uname{font-size:11px;font-weight:600;color:var(--text)}
+.urole{font-size:9px;color:var(--text3);text-transform:uppercase;letter-spacing:.3px}
+.signout{padding:5px 11px;border-radius:7px;border:1px solid #ef444433;background:transparent;color:#f87171;font-family:inherit;font-size:11px;font-weight:600;cursor:pointer}
+#install-btn{padding:5px 11px;border-radius:7px;border:1px solid var(--border);background:transparent;color:var(--accent3);font-family:inherit;font-size:10px;cursor:pointer;display:none}
+#offline-bar{position:fixed;top:58px;left:0;right:0;background:#78350f;border-bottom:1px solid #f59e0b55;color:#fde68a;font-size:11px;font-weight:600;text-align:center;padding:5px;z-index:99;display:none}
+#main{padding:22px;max-width:1380px;margin:0 auto;width:100%}
+#loading-overlay{position:fixed;inset:0;background:rgba(7,17,31,.8);display:none;align-items:center;justify-content:center;z-index:500;flex-direction:column;gap:12px}
+#loading-overlay .sp-ring{margin:0}
+#loading-overlay span{color:var(--text2);font-size:13px}
+
+/* ── CARDS ── */
+.card{background:var(--bg2);border:1px solid var(--border);border-radius:13px;padding:20px}
+.card-title{font-size:11px;font-weight:700;color:var(--text2);text-transform:uppercase;letter-spacing:1.4px;margin-bottom:14px;display:flex;justify-content:space-between;align-items:center}
+.sg{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:20px}
+.sc{border-radius:13px;padding:16px;position:relative;overflow:hidden;background:linear-gradient(135deg,var(--bg2),#0f1e35)}
+.sa{position:absolute;top:0;left:0;right:0;height:3px;border-radius:13px 13px 0 0}
+.sn{font-family:"Courier New",monospace;font-size:28px;font-weight:800;color:#fff;line-height:1;margin-bottom:4px}
+.sl{font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:1.3px}
+.g2{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+.g3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;margin-bottom:18px}
+.orow{display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--border);cursor:pointer}
+.orow:last-child{border-bottom:none}
+
+/* ── OFFICERS ── */
+.og{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:12px}
+.oc{background:var(--bg2);border:1px solid var(--border);border-radius:12px;padding:16px;cursor:pointer;transition:border-color .2s}
+.oc.sel{border-color:var(--accent2)}
+.och{display:flex;align-items:center;gap:10px;margin-bottom:10px}
+.exp{border-top:1px solid var(--border);padding-top:12px;margin-top:4px}
+.av{width:34px;height:34px;border-radius:9px;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;color:#fff;flex-shrink:0}
+.badge{display:inline-flex;align-items:center;gap:4px;padding:2px 8px;border-radius:16px;font-size:10px;font-weight:600}
+.pill{padding:1px 8px;border-radius:16px;font-size:10px;font-weight:600;display:inline-block}
+.dot{width:5px;height:5px;border-radius:50%;display:inline-block;flex-shrink:0}
+.rn{background:var(--red)22;color:var(--red);border:1px solid var(--red)33;padding:2px 8px;border-radius:12px;font-size:10px;font-weight:700}
+.readonly-notice{background:#1e3a5f22;border:1px solid var(--border);border-radius:7px;padding:8px 12px;font-size:11px;color:var(--text3);text-align:center}
+
+/* ── SEARCH ── */
+.sbar{position:relative;margin-bottom:16px}
+.sbar input{width:100%;padding:9px 12px 9px 36px;border-radius:9px;border:1px solid var(--border);background:#060e1a;color:var(--text);font-family:inherit;font-size:13px;outline:none}
+.sbar input:focus{border-color:var(--accent2)}
+.sbar::before{content:"🔍";position:absolute;left:11px;top:50%;transform:translateY(-50%);font-size:14px;pointer-events:none}
+
+/* ── PREMISES ── */
+.prg{display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:12px}
+.prc{background:var(--bg2);border:1px solid var(--border);border-radius:12px;padding:16px;cursor:pointer;transition:all .2s}
+.prc:hover{border-color:var(--accent2);transform:translateY(-1px)}
+.prc.exp{border-color:var(--accent2)}
+
+/* ── DEPLOYMENTS ── */
+.dc{background:var(--bg2);border:1px solid var(--border);border-radius:11px;padding:14px 16px;margin-bottom:9px}
+.dtab{padding:6px 14px;border-radius:7px;border:none;cursor:pointer;font-family:inherit;font-size:11px;font-weight:600;background:var(--bg3);color:var(--text3);transition:all .2s}
+.dtab.on{background:linear-gradient(135deg,var(--accent),var(--accent2));color:#fff}
+
+/* ── PAYROLL / ACCOUNTS ── */
+.payrow{display:flex;align-items:center;gap:12px;padding:12px 0;border-bottom:1px solid var(--border)55}
+.payrow:last-child{border-bottom:none}
+.rate-scale{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px}
+.rs-btn{padding:5px 14px;border-radius:7px;border:1px solid var(--border);background:transparent;color:var(--text3);cursor:pointer;font-family:inherit;font-size:11px;font-weight:600;transition:all .2s}
+.rs-btn.on{border-color:var(--accent2);background:var(--accent2)22;color:var(--accent3)}
+.paycard{background:var(--bg2);border:1px solid var(--border);border-radius:12px;padding:18px;margin-bottom:10px}
+.paycard.highlight{border-color:var(--gold);background:#fbbf2408}
+
+/* ── DUTY / CHECK-IN ── */
+.duty-card{background:var(--bg2);border:1px solid var(--border);border-radius:12px;padding:16px;margin-bottom:10px}
+.confirmed{border-color:var(--green)55;background:var(--green)08}
+.patrol-log{background:var(--bg3);border-radius:8px;padding:10px 12px;margin-top:8px;font-size:11px;color:var(--text2)}
+
+/* ── SCHEDULE ── */
+.cal-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:4px}
+.cal-day{background:var(--bg3);border-radius:7px;padding:6px 4px;text-align:center;font-size:11px;min-height:60px}
+.cal-day.today{border:1px solid var(--accent2)}
+.cal-day.header{background:transparent;font-size:10px;font-weight:700;color:var(--text3);min-height:auto;padding:4px}
+.cal-dot{width:6px;height:6px;border-radius:50%;margin:2px auto}
+
+/* ── WEAPONS ── */
+.weapon-badge{display:inline-flex;align-items:center;gap:5px;padding:3px 10px;border-radius:12px;font-size:10px;font-weight:700}
+.armed{background:var(--red)22;color:var(--red);border:1px solid var(--red)33}
+.unarmed{background:var(--green)22;color:var(--green);border:1px solid var(--green)33}
+
+/* ── MODALS ── */
+.mo{position:fixed;inset:0;background:rgba(0,0,0,.8);display:flex;align-items:center;justify-content:center;z-index:1000;padding:16px}
+.mb{background:var(--bg2);border:1px solid var(--border2);border-radius:15px;padding:24px;width:480px;max-width:100%;max-height:90vh;overflow-y:auto}
+.mb.narrow{width:380px;text-align:center}
+.mb.wide{width:620px}
+label.fl{font-size:10px;color:var(--text3);letter-spacing:.7px;text-transform:uppercase;margin-bottom:5px;display:block}
+input,select,textarea{width:100%;padding:9px 11px;border-radius:8px;border:1px solid var(--border);background:#060e1a;color:var(--text);font-family:inherit;font-size:13px;outline:none;transition:border-color .2s}
+input:focus,select:focus,textarea:focus{border-color:var(--border2)}
+input::placeholder,textarea::placeholder{color:var(--text3)}
+input[type=date]::-webkit-calendar-picker-indicator,
+input[type=time]::-webkit-calendar-picker-indicator{filter:invert(.4)}
+.fg{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px}
+.fgp{margin-bottom:12px}
+.fa{display:flex;gap:8px;justify-content:flex-end;margin-top:6px}
+.btn{padding:8px 16px;border-radius:7px;border:none;cursor:pointer;font-family:inherit;font-size:12px;font-weight:600;transition:all .2s}
+.bp{background:linear-gradient(135deg,var(--accent),var(--accent2));color:#fff}.bp:hover{opacity:.9}
+.bs{background:var(--bg3);color:var(--text2)}.bs:hover{background:#253551}
+.bd{background:linear-gradient(135deg,#7f1d1d,var(--red));color:#fff}.bd:hover{opacity:.9}
+.bg{background:linear-gradient(135deg,#14532d,var(--green));color:#fff}.bg:hover{opacity:.9}
+.bw{background:linear-gradient(135deg,#78350f,var(--yellow));color:#fff}.bw:hover{opacity:.9}
+.bsm{padding:3px 8px;font-size:10px}.bxs{padding:2px 7px;font-size:10px}.bfull{width:100%}
+.fb{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:14px;align-items:center}
+.fsep{width:1px;height:22px;background:var(--border);margin:0 2px}
+.ts{display:flex;gap:6px;margin-bottom:16px}
+.tr{display:flex;align-items:center;gap:12px;padding:11px 16px;background:var(--bg2);border:1px solid var(--border);border-radius:10px}
+.tb2{width:4px;min-height:38px;border-radius:3px;flex-shrink:0;align-self:stretch}
+.tstat{display:flex;gap:14px;margin-bottom:16px;flex-wrap:wrap}
+.tsc{flex:1;min-width:80px;padding:10px 14px;background:var(--bg2);border:1px solid var(--border);border-radius:10px;display:flex;justify-content:space-between;align-items:center}
+
+/* ── TOAST ── */
+#toast{position:fixed;bottom:22px;right:22px;padding:10px 16px;border-radius:9px;font-size:12px;font-weight:600;z-index:3000;display:none;align-items:center;gap:7px;max-width:320px}
+#toast.show{display:flex}
+#toast.s{background:#14532d;border:1px solid var(--green);color:#f1f5f9}
+#toast.e{background:#7f1d1d;border:1px solid var(--red);color:#f1f5f9}
+#toast.i{background:#1e3a5f;border:1px solid var(--accent2);color:#f1f5f9}
+#toast.w{background:#78350f;border:1px solid var(--yellow);color:#f1f5f9}
+
+/* ── SECTION ── */
+.sh{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:6px;gap:10px;flex-wrap:wrap}
+.st{font-size:19px;font-weight:700;color:#fff;margin-bottom:3px}
+.ss{font-size:12px;color:var(--text3);margin-bottom:16px}
+.el{font-size:10px;color:var(--text3);margin-bottom:7px;letter-spacing:.7px;text-transform:uppercase}
+.sbtns{display:flex;gap:5px;flex-wrap:wrap;margin-bottom:10px}
+.tmini{display:flex;justify-content:space-between;align-items:center;padding:5px 0;border-top:1px solid var(--border)33}
+.shdr{display:flex;align-items:center;gap:12px;margin-bottom:10px}
+.sdiv{flex:1;height:1px;background:var(--border)}
+.scg{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:10px;margin-bottom:22px}
+.ut{width:100%;border-collapse:collapse}
+.ut th{font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:1px;padding:9px 12px;border-bottom:1px solid var(--border);text-align:left}
+.ut td{padding:9px 12px;border-bottom:1px solid var(--border)33;font-size:12px;color:var(--text);vertical-align:middle}
+.ut tr:last-child td{border-bottom:none}
+.pav{width:60px;height:60px;border-radius:14px;background:linear-gradient(135deg,var(--accent),var(--accent2));display:flex;align-items:center;justify-content:center;font-size:22px;font-weight:700;color:#fff;margin:0 auto 12px}
+
+/* ── LOGO UPLOAD ── */
+.logo-upload{width:80px;height:80px;border-radius:14px;border:2px dashed var(--border);display:flex;align-items:center;justify-content:center;cursor:pointer;overflow:hidden;transition:border-color .2s;flex-shrink:0}
+.logo-upload:hover{border-color:var(--accent2)}
+.logo-upload img{width:100%;height:100%;object-fit:cover}
+
+/* ── ARMED INDICATOR ── */
+.armed-tag{display:inline-flex;align-items:center;gap:4px;padding:2px 9px;border-radius:12px;font-size:10px;font-weight:700;background:var(--red)22;color:var(--red);border:1px solid var(--red)33}
+.unarmed-tag{display:inline-flex;align-items:center;gap:4px;padding:2px 9px;border-radius:12px;font-size:10px;font-weight:700;background:var(--green)22;color:var(--green);border:1px solid var(--green)33}
+
+@media(max-width:1024px){.sg{grid-template-columns:repeat(2,1fr)}.g3{grid-template-columns:1fr 1fr}}
+@media(max-width:900px){.g2{grid-template-columns:1fr}#topbar{flex-wrap:wrap;height:auto;padding:8px 14px;gap:6px}#clock{display:none}#nav{order:3;width:100%}.nb{padding:5px 9px;font-size:10px}#main{padding:14px}}
+@media(max-width:600px){.sg{grid-template-columns:1fr 1fr}.fg{grid-template-columns:1fr}.tstat{flex-direction:column}.a-card{padding:22px 16px}.a-row{grid-template-columns:1fr}.type-grid{grid-template-columns:1fr 1fr 1fr}.g3{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+
+<!-- SPLASH -->
+<div id="splash">
+  <div style="position:relative;width:90px;height:90px;display:flex;align-items:center;justify-content:center">
+    <div class="sp-ring"></div>
+    <div class="sp-logo">🛡</div>
+  </div>
+  <div class="sp-title">SENTINEL OPS</div>
+  <div class="sp-sub">Enterprise Security Platform</div>
+  <div class="sp-bar"><div class="sp-fill"></div></div>
+</div>
+
+<div id="offline-bar">⚡ Offline — showing cached data</div>
+
+<!-- AUTH -->
+<div id="auth" style="display:none">
+  <div class="a-card">
+    <div class="a-logo">
+      <div class="a-logo-icon" id="a-logo-icon">🛡</div>
+      <div>
+        <div class="a-org-name" id="a-org-name">SENTINEL OPS</div>
+        <div class="a-org-tag">Enterprise Security Platform</div>
+      </div>
+    </div>
+
+    <!-- LOGIN PANEL -->
+    <div id="p-login">
+      <div class="a-title">Welcome back</div>
+      <div class="a-sub">Select your organisation and sign in</div>
+      <div class="a-tabs">
+        <button class="a-tab on" onclick="sp('login')">Sign In</button>
+        <button class="a-tab" onclick="sp('register')">Sign Up</button>
+      </div>
+      <div class="a-err" id="lerr"></div>
+      <div class="a-field">
+        <label>Organisation</label>
+        <div style="position:relative">
+          <input id="l-org-search" placeholder="Search or type organisation name…" autocomplete="off"
+            oninput="filterOrgs(this.value)"
+            onfocus="showOrgDropdown()"
+            onblur="setTimeout(()=>hideOrgDropdown(),200)"
+          />
+          <input type="hidden" id="l-org" value=""/>
+          <div id="org-dropdown" style="display:none;position:absolute;top:100%;left:0;right:0;background:#060e1a;border:1px solid var(--border2);border-radius:0 0 9px 9px;z-index:100;max-height:180px;overflow-y:auto;margin-top:-1px">
+          </div>
+        </div>
+      </div>
+      <div class="a-field"><label>Username</label><input id="l-user" placeholder="Your username" onkeydown="if(event.key==='Enter')doLogin()"/></div>
+      <div class="a-field"><label>Password</label><input id="l-pass" type="password" placeholder="Your password" onkeydown="if(event.key==='Enter')doLogin()"/></div>
+      <button class="a-btn" onclick="doLogin()">Sign In →</button>
+      <div class="a-link">Don't have an account? <span onclick="sp('register')">Sign Up</span></div>
+    </div>
+
+    <!-- REGISTER PANEL -->
+    <div id="p-register" style="display:none">
+      <div class="a-title">Create account</div>
+      <div class="a-sub">Join your organisation or create a new one</div>
+      <div class="a-tabs">
+        <button class="a-tab" onclick="sp('login')">Sign In</button>
+        <button class="a-tab on" onclick="sp('register')">Sign Up</button>
+      </div>
+      <div class="a-err" id="rerr"></div>
+      <!-- Account type -->
+      <div class="a-field">
+        <label>Account Type</label>
+        <div class="type-grid">
+          <div class="type-card on" id="tc-user" onclick="selType('user')">
+            <div class="ti">👤</div>
+            <div class="tn">User</div>
+            <div class="td">View access</div>
+          </div>
+          <div class="type-card" id="tc-admin" onclick="selType('admin')">
+            <div class="ti">🛡</div>
+            <div class="tn">Admin</div>
+            <div class="td">Full access</div>
+          </div>
+          <div class="type-card" id="tc-acct" onclick="selType('accountant')">
+            <div class="ti">💼</div>
+            <div class="tn">Accountant</div>
+            <div class="td">Payroll access</div>
+          </div>
+        </div>
+        <input type="hidden" id="r-type" value="user"/>
+      </div>
+      <!-- Org selection (user/accountant joins existing) -->
+      <div class="a-field" id="r-org-select-wrap">
+        <label>Organisation to Join</label>
+        <div style="position:relative">
+          <input id="r-org-search" placeholder="Search organisation name…" autocomplete="off"
+            oninput="filterOrgsReg(this.value)"
+            onfocus="showOrgDropdownReg()"
+            onblur="setTimeout(()=>hideOrgDropdownReg(),200)"
+          />
+          <input type="hidden" id="r-org-sel" value=""/>
+          <div id="org-dropdown-reg" style="display:none;position:absolute;top:100%;left:0;right:0;background:#060e1a;border:1px solid var(--border2);border-radius:0 0 9px 9px;z-index:100;max-height:160px;overflow-y:auto;margin-top:-1px"></div>
+        </div>
+      </div>
+      <!-- Org creation (admin creates new) -->
+      <div id="r-org-create-wrap" style="display:none">
+        <div class="a-field">
+          <label>Organisation Name <span style="color:var(--accent3)">(creates new organisation)</span></label>
+          <input id="r-org-name" placeholder="e.g. SecureGuard Ltd"/>
+        </div>
+        <div class="a-field">
+          <label>Organisation Logo <span style="color:var(--text3)">(optional)</span></label>
+          <div style="display:flex;align-items:center;gap:12px">
+            <div class="logo-upload" id="logo-upload-preview" onclick="document.getElementById('logo-file').click()">
+              <span style="font-size:24px">📷</span>
+            </div>
+            <div style="font-size:11px;color:var(--text3)">Click to upload logo<br>PNG, JPG — max 500KB</div>
+            <input type="file" id="logo-file" accept="image/*" style="display:none" onchange="handleLogoUpload(this)"/>
+          </div>
+        </div>
+      </div>
+      <div class="a-field"><label>Full Name</label><input id="r-name" placeholder="Your full name"/></div>
+      <div class="a-row">
+        <div class="a-field"><label>Username</label><input id="r-user" placeholder="Choose username"/></div>
+        <div class="a-field"><label>Gender</label>
+          <select id="r-gender">
+            <option value="">Select</option>
+            <option value="male">Male</option>
+            <option value="female">Female</option>
+            <option value="other">Other</option>
+          </select>
+        </div>
+      </div>
+      <div class="a-field"><label>Password</label><input id="r-pass" type="password" placeholder="Min 6 characters"/></div>
+      <button class="a-btn" onclick="doRegister()">Continue →</button>
+      <div class="a-link">Already registered? <span onclick="sp('login')">Sign In</span></div>
+    </div>
+
+    <!-- VERIFY PANEL -->
+    <div id="p-verify" style="display:none">
+      <div class="a-title">Verify identity</div>
+      <div class="a-sub" id="v-sub">Share this code with your admin.</div>
+      <div class="code-box">
+        <div style="font-size:10px;color:var(--text3);letter-spacing:2px;text-transform:uppercase;margin-bottom:10px">Verification Code</div>
+        <div class="code-digits" id="v-code">------</div>
+        <div style="margin-top:8px;font-size:11px;color:var(--text3)">Expires in <span class="timer" id="v-timer">10:00</span></div>
+      </div>
+      <div style="font-size:12px;color:var(--text3);text-align:center;margin-bottom:12px">Enter the code below to confirm</div>
+      <div class="a-err" id="verr"></div>
+      <div class="code-inputs">
+        <input class="code-in" maxlength="1" id="ci0" oninput="cin(this,0)" onkeydown="ckn(this,0,event)"/>
+        <input class="code-in" maxlength="1" id="ci1" oninput="cin(this,1)" onkeydown="ckn(this,1,event)"/>
+        <input class="code-in" maxlength="1" id="ci2" oninput="cin(this,2)" onkeydown="ckn(this,2,event)"/>
+        <input class="code-in" maxlength="1" id="ci3" oninput="cin(this,3)" onkeydown="ckn(this,3,event)"/>
+        <input class="code-in" maxlength="1" id="ci4" oninput="cin(this,4)" onkeydown="ckn(this,4,event)"/>
+        <input class="code-in" maxlength="1" id="ci5" oninput="cin(this,5)" onkeydown="ckn(this,5,event)"/>
+      </div>
+      <button class="a-btn" id="v-btn" onclick="doVerify()">Confirm →</button>
+      <button style="background:none;border:none;color:var(--text3);font-size:12px;cursor:pointer;display:block;text-align:center;width:100%;margin-top:10px" onclick="sp('register')">← Start over</button>
+    </div>
+
+    <!-- PENDING PANEL -->
+    <div id="p-pending" style="display:none">
+      <div style="text-align:center;padding:16px 0">
+        <div style="font-size:44px;margin-bottom:12px">⏳</div>
+        <div style="font-size:17px;font-weight:700;color:#fff;margin-bottom:7px">Awaiting Approval</div>
+        <div style="font-size:12px;color:var(--text3);margin-bottom:20px">Your identity is verified. An admin must approve your account. Contact your organisation administrator.</div>
+        <button class="btn bs bfull" onclick="sp('login')">← Back to Sign In</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- APP SHELL -->
+<div id="app">
+  <div id="topbar">
+    <div id="logo" onclick="nav('dashboard')">
+      <div class="tb-logo-img" id="tb-logo">🛡</div>
+      <div><div class="tb-org" id="tb-org">SENTINEL OPS</div><div class="tb-sub">Security Platform</div></div>
+    </div>
+    <div id="nav">
+      <button class="nb on" data-v="dashboard">Dashboard</button>
+      <button class="nb" data-v="officers">Officers</button>
+      <button class="nb" data-v="duty">Duty Log</button>
+      <button class="nb" data-v="tasks">Tasks</button>
+      <button class="nb" data-v="deployments">Deployments</button>
+      <button class="nb" data-v="premises">Premises</button>
+      <button class="nb" data-v="schedule">Schedule</button>
+      <button class="nb acct-only" data-v="payroll" style="display:none">Payroll</button>
+      <button class="nb admin-only" data-v="users" style="display:none">Users</button>
+    </div>
+    <div id="tbr">
+      <div id="clock"></div>
+      <button id="install-btn" onclick="installApp()">⬇ Install</button>
+      <div class="bell" id="bell" onclick="nav('users')" style="display:none">🔔<span class="bell-badge" id="bell-cnt">0</span></div>
+      <div class="uchip" onclick="openProfile()">
+        <div class="uav" id="uav">?</div>
+        <div><div class="uname" id="uname">—</div><div class="urole" id="urole">—</div></div>
+      </div>
+      <button class="signout" onclick="doLogout()">Sign Out</button>
+    </div>
+  </div>
+  <div id="main"></div>
+</div>
+
+<!-- LOADING OVERLAY -->
+<div id="loading-overlay">
+  <div style="position:relative;width:50px;height:50px;display:flex;align-items:center;justify-content:center">
+    <div class="sp-ring" style="width:50px;height:50px"></div>
+    <div style="position:absolute;font-size:18px">🛡</div>
+  </div>
+  <span id="loading-msg">Loading…</span>
+</div>
+
+<!-- MODALS -->
+<!-- Officer Modal -->
+<div class="mo" id="m-officer" style="display:none" onclick="if(event.target===this)cm('m-officer')">
+  <div class="mb wide">
+    <div style="font-size:16px;font-weight:700;color:#fff;margin-bottom:18px" id="om-title">Add Officer</div>
+    <div class="fg">
+      <div style="grid-column:1/-1"><label class="fl">Full Name</label><input id="o-name" placeholder="Officer full name"/></div>
+      <div><label class="fl">Gender</label><select id="o-gender"><option value="male">Male</option><option value="female">Female</option><option value="other">Other</option></select></div>
+      <div><label class="fl">Role</label><select id="o-role"><option>Field Officer</option><option>Supervisor</option><option>Admin</option></select></div>
+      <div><label class="fl">Shift</label><select id="o-shift"><option>Morning</option><option>Evening</option><option>Night</option></select></div>
+      <div><label class="fl">Deployment Zone</label><select id="o-depzone"><option value="field">Field Deployment</option></select></div>
+      <div style="grid-column:1/-1"><label class="fl">Location / Post</label><input id="o-zone" list="zlist" placeholder="e.g. Gate A, Block C…"/><datalist id="zlist"><option value="Gate A"/><option value="Gate B"/><option value="Perimeter"/><option value="Control Room"/><option value="Office"/><option value="Parking Lot"/><option value="Main Entrance"/></datalist></div>
+      <div><label class="fl">Status</label><select id="o-status"><option>Off Duty</option><option>On Duty</option><option>On Patrol</option><option>On Break</option><option>AWOL</option><option>Leave</option><option>Paid Leave</option></select></div>
+      <div><label class="fl">Guard Type</label><select id="o-armed" onchange="toggleWeapon(this.value)"><option value="unarmed">Unarmed</option><option value="armed">Armed</option></select></div>
+    </div>
+    <div id="weapon-fields" style="display:none;border:1px solid var(--red)33;border-radius:10px;padding:14px;background:var(--red)08;margin-bottom:12px">
+      <div style="font-size:11px;font-weight:700;color:var(--red);margin-bottom:10px">🔫 Weapon Details</div>
+      <div class="fg">
+        <div><label class="fl">Weapon Type</label><input id="o-wtype" placeholder="e.g. Pistol, Rifle…"/></div>
+        <div><label class="fl">Serial Number</label><input id="o-wserial" placeholder="Weapon serial no."/></div>
+        <div><label class="fl">Ammunition Type</label><input id="o-atype" placeholder="e.g. 9mm, .38 Special…"/></div>
+        <div><label class="fl">Ammunition Count</label><input id="o-acount" type="number" min="0" placeholder="Number of rounds"/></div>
+      </div>
+    </div>
+    <input type="hidden" id="o-id" value=""/>
+    <div class="fa"><button class="btn bs" onclick="cm('m-officer')">Cancel</button><button class="btn bp" onclick="submitOfficer()">Save Officer</button></div>
+  </div>
+</div>
+
+<!-- Task Modal -->
+<div class="mo" id="m-task" style="display:none" onclick="if(event.target===this)cm('m-task')">
+  <div class="mb">
+    <div style="font-size:16px;font-weight:700;color:#fff;margin-bottom:18px" id="tm-title">Assign Task</div>
+    <div class="fgp"><label class="fl">Task Title</label><input id="t-title" placeholder="e.g. Perimeter patrol"/></div>
+    <div class="fg">
+      <div><label class="fl">Assign To</label><select id="t-off"></select></div>
+      <div><label class="fl">Due Time</label><input id="t-due" type="time"/></div>
+      <div><label class="fl">Priority</label><select id="t-pri"><option>Medium</option><option>High</option><option>Low</option></select></div>
+      <div><label class="fl">Category</label><select id="t-cat"><option>Security</option><option>Patrol</option><option>Admin</option><option>Technical</option><option>Emergency</option></select></div>
+    </div>
+    <input type="hidden" id="t-id" value=""/>
+    <div class="fa"><button class="btn bs" onclick="cm('m-task')">Cancel</button><button class="btn bp" id="t-save" onclick="submitTask()">Assign</button></div>
+  </div>
+</div>
+
+<!-- Deployment Modal -->
+<div class="mo" id="m-depl" style="display:none" onclick="if(event.target===this)cm('m-depl')">
+  <div class="mb">
+    <div style="font-size:16px;font-weight:700;color:#fff;margin-bottom:18px">New Deployment</div>
+    <div class="fgp"><label class="fl">Title / Mission</label><input id="d-title" placeholder="e.g. Night Patrol — City Centre"/></div>
+    <div class="fg">
+      <div><label class="fl">Officer</label><select id="d-off"></select></div>
+      <div><label class="fl">Location</label><input id="d-loc" list="dloc" placeholder="e.g. Gate A"/><datalist id="dloc"><option value="Gate A"/><option value="Gate B"/><option value="Perimeter"/><option value="Office"/><option value="Main Entrance"/></datalist></div>
+      <div><label class="fl">Date</label><input id="d-date" type="date"/></div>
+      <div><label class="fl">Time</label><input id="d-time" type="time"/></div>
+      <div><label class="fl">Zone</label><select id="d-zone"><option value="field">Field Deployment</option></select></div>
+      <div><label class="fl">Status</label><select id="d-status"><option value="pending">Pending</option><option value="active">Active</option><option value="completed">Completed</option></select></div>
+    </div>
+    <div class="fgp"><label class="fl">Notes</label><textarea id="d-notes" rows="2" placeholder="Additional notes…" style="resize:vertical"></textarea></div>
+    <div class="fa"><button class="btn bs" onclick="cm('m-depl')">Cancel</button><button class="btn bp" onclick="submitDepl()">Save</button></div>
+  </div>
+</div>
+
+<!-- Rate Modal (Accountant) -->
+<div class="mo" id="m-rate" style="display:none" onclick="if(event.target===this)cm('m-rate')">
+  <div class="mb">
+    <div style="font-size:16px;font-weight:700;color:#fff;margin-bottom:6px" id="rate-title">Set Pay Rate</div>
+    <div style="font-size:12px;color:var(--text3);margin-bottom:16px" id="rate-sub">Configure officer compensation</div>
+    <div class="fgp">
+      <label class="fl">Pay Scale</label>
+      <div class="rate-scale" id="rate-scale-btns">
+        <button class="rs-btn on" data-scale="daily" onclick="selScale(this)">Daily</button>
+        <button class="rs-btn" data-scale="hourly" onclick="selScale(this)">Hourly</button>
+        <button class="rs-btn" data-scale="monthly" onclick="selScale(this)">Monthly</button>
+        <button class="rs-btn" data-scale="yearly" onclick="selScale(this)">Yearly</button>
+      </div>
+      <input type="hidden" id="rate-scale" value="daily"/>
+    </div>
+    <div class="fg">
+      <div><label class="fl">Base Rate</label><input id="rate-base" type="number" min="0" step="0.01" placeholder="0.00"/></div>
+      <div><label class="fl">Currency</label><select id="rate-currency"><option>USD</option><option>ZWL</option><option>ZAR</option><option>GBP</option><option>EUR</option></select></div>
+      <div><label class="fl">Overtime Rate (per hour)</label><input id="rate-ot" type="number" min="0" step="0.01" placeholder="0.00"/></div>
+      <div><label class="fl">Payday (day of month)</label><input id="rate-payday" type="number" min="1" max="31" placeholder="e.g. 25"/></div>
+    </div>
+    <input type="hidden" id="rate-officer-id" value=""/>
+    <div class="fa"><button class="btn bs" onclick="cm('m-rate')">Cancel</button><button class="btn bp" onclick="submitRate()">Save Rate</button></div>
+  </div>
+</div>
+
+<!-- Duty Confirm Modal -->
+<div class="mo" id="m-duty" style="display:none" onclick="if(event.target===this)cm('m-duty')">
+  <div class="mb narrow">
+    <div style="font-size:32px;margin-bottom:10px">✅</div>
+    <div style="font-size:16px;font-weight:700;color:#fff;margin-bottom:6px">Confirm Duty</div>
+    <div style="font-size:12px;color:var(--text3);margin-bottom:16px" id="duty-officer-name">—</div>
+    <div class="fgp"><label class="fl">Shift</label><select id="duty-shift"><option>Morning</option><option>Evening</option><option>Night</option></select></div>
+    <div class="fgp"><label class="fl">Notes (optional)</label><textarea id="duty-notes" rows="2" placeholder="Any notes…" style="resize:none"></textarea></div>
+    <input type="hidden" id="duty-officer-id" value=""/>
+    <div class="fa"><button class="btn bs" onclick="cm('m-duty')">Cancel</button><button class="btn bg bfull" onclick="confirmDuty()">✓ Confirm Duty</button></div>
+  </div>
+</div>
+
+<!-- Patrol Log Modal -->
+<div class="mo" id="m-patrol" style="display:none" onclick="if(event.target===this)cm('m-patrol')">
+  <div class="mb narrow">
+    <div style="font-size:32px;margin-bottom:10px">🚶</div>
+    <div style="font-size:16px;font-weight:700;color:#fff;margin-bottom:16px">Log Patrol Round</div>
+    <div class="fgp"><label class="fl">Location / Checkpoint</label><input id="patrol-loc" list="ploc" placeholder="e.g. Gate A, Perimeter…"/><datalist id="ploc"><option value="Gate A"/><option value="Gate B"/><option value="Perimeter"/><option value="Main Entrance"/><option value="Parking Lot"/></datalist></div>
+    <div class="fgp"><label class="fl">Notes (optional)</label><textarea id="patrol-notes" rows="2" placeholder="Observations…" style="resize:none"></textarea></div>
+    <input type="hidden" id="patrol-duty-id" value=""/>
+    <input type="hidden" id="patrol-officer-id" value=""/>
+    <div class="fa"><button class="btn bs" onclick="cm('m-patrol')">Cancel</button><button class="btn bp bfull" onclick="logPatrol()">Log Patrol</button></div>
+  </div>
+</div>
+
+<!-- Confirm Delete Modal -->
+<div class="mo" id="m-confirm" style="display:none" onclick="if(event.target===this)cm('m-confirm')">
+  <div class="mb narrow">
+    <div style="font-size:32px;margin-bottom:10px">⚠️</div>
+    <div style="font-size:15px;font-weight:700;color:#fff;margin-bottom:7px" id="conf-title">Confirm</div>
+    <div id="conf-text" style="font-size:12px;color:var(--text3);margin-bottom:20px"></div>
+    <div style="display:flex;gap:8px"><button class="btn bs bfull" onclick="cm('m-confirm')">Cancel</button><button class="btn bd bfull" id="conf-yes">Confirm</button></div>
+  </div>
+</div>
+
+<!-- Profile Modal -->
+<div class="mo" id="m-profile" style="display:none" onclick="if(event.target===this)cm('m-profile')">
+  <div class="mb narrow">
+    <div class="pav" id="prof-av">?</div>
+    <div style="font-size:17px;font-weight:700;color:#fff;margin-bottom:3px" id="prof-name">—</div>
+    <div style="font-size:11px;color:var(--text3);margin-bottom:18px" id="prof-meta">—</div>
+    <div style="text-align:left;margin-bottom:18px">
+      <div class="fgp"><label class="fl">Display Name</label><input id="p-dname" placeholder="Your name"/></div>
+      <div id="org-settings-wrap" style="display:none">
+        <div style="font-size:11px;font-weight:700;color:var(--text2);margin-bottom:10px;text-transform:uppercase;letter-spacing:1px">Organisation Settings (Admin)</div>
+        <div class="fgp"><label class="fl">Organisation Name</label><input id="p-orgname" placeholder="Organisation name"/></div>
+        <div class="fgp">
+          <label class="fl">Organisation Logo</label>
+          <div style="display:flex;align-items:center;gap:12px">
+            <div class="logo-upload" id="org-logo-preview" onclick="document.getElementById('org-logo-file').click()">
+              <span style="font-size:24px">📷</span>
+            </div>
+            <div style="font-size:11px;color:var(--text3)">Click to change logo</div>
+            <input type="file" id="org-logo-file" accept="image/*" style="display:none" onchange="handleOrgLogoUpdate(this)"/>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div style="display:flex;gap:8px"><button class="btn bs bfull" onclick="cm('m-profile')">Cancel</button><button class="btn bp bfull" onclick="saveProfile()">Save</button></div>
+  </div>
+</div>
+
+<div id="toast"></div>
+
+<script>
+// ══════════════════════════════════════════════════════════════
+// SUPABASE
+// ══════════════════════════════════════════════════════════════
+const SB_URL="https://smdfdyvcsfbejekqgvow.supabase.co";
+const SB_KEY="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNtZGZkeXZjc2ZiZWpla3Fndm93Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzUzMjU4ODksImV4cCI6MjA5MDkwMTg4OX0.OBWdV0LDEp8xosFtYFkq9JoIkOYizsNXiPXNt206c9M";
+const sb=supabase.createClient(SB_URL,SB_KEY);
+
+// ══════════════════════════════════════════════════════════════
+// PWA
+// ══════════════════════════════════════════════════════════════
+if('serviceWorker' in navigator)window.addEventListener('load',()=>navigator.serviceWorker.register('./sw.js',{scope:'./'}).catch(()=>{}));
+let deferredInstall=null;
+window.addEventListener('beforeinstallprompt',e=>{e.preventDefault();deferredInstall=e;const b=document.getElementById('install-btn');if(b)b.style.display='block';});
+function installApp(){if(deferredInstall){deferredInstall.prompt();deferredInstall.userChoice.then(()=>{deferredInstall=null;document.getElementById('install-btn').style.display='none';});}}
+window.addEventListener('offline',()=>{document.getElementById('offline-bar').style.display='block';});
+window.addEventListener('online',()=>{document.getElementById('offline-bar').style.display='none';});
+
+// ══════════════════════════════════════════════════════════════
+// STATE
+// ══════════════════════════════════════════════════════════════
+const S={
+  view:"dashboard",user:null,profile:null,org:null,
+  officers:[],tasks:[],deployments:[],dutyLogs:[],patrolLogs:[],notifications:[],
+  payRates:[],attendance:[],orgs:[],
+  filterShift:"All",filterRole:"All",filterDepzone:"All",filterArmed:"All",
+  officerSearch:"",deplFilter:"all",deplDate:"",deplLoc:"",
+  selOfficer:null,selPremise:null,schedMonth:new Date(),
+  pendingReg:null,vCode:null,vExpiry:null,pendingConfirm:null,
+  logoBase64:null,
+};
+
+// ══════════════════════════════════════════════════════════════
+// CONSTANTS
+// ══════════════════════════════════════════════════════════════
+const SHIFTS=["Morning","Evening","Night"];
+const ROLES=["Field Officer","Supervisor","Admin"];
+const STATUSES=["On Duty","On Patrol","On Break","Off Duty","AWOL","Leave","Paid Leave"];
+const TASK_S=["Pending","In Progress","Completed"];
+const SC={"On Duty":"#22c55e","On Patrol":"#3b82f6","On Break":"#f59e0b","Off Duty":"#6b7280","AWOL":"#ef4444","Leave":"#8b5cf6","Paid Leave":"#06b6d4"};
+const PC={"High":"#ef4444","Medium":"#f59e0b","Low":"#22c55e"};
+const TC={"Pending":"#f59e0b","In Progress":"#3b82f6","Completed":"#22c55e"};
+const DC={"pending":"#f59e0b","active":"#22c55e","completed":"#6b7280"};
+const AVC=["linear-gradient(135deg,#1d4ed8,#3b82f6)","linear-gradient(135deg,#7c3aed,#a78bfa)","linear-gradient(135deg,#065f46,#10b981)","linear-gradient(135deg,#9a3412,#f97316)","linear-gradient(135deg,#be123c,#f43f5e)","linear-gradient(135deg,#0e7490,#22d3ee)","linear-gradient(135deg,#92400e,#fbbf24)","linear-gradient(135deg,#3730a3,#818cf8)"];
+
+// ══════════════════════════════════════════════════════════════
+// HELPERS
+// ══════════════════════════════════════════════════════════════
+function esc(s){return String(s||"").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;");}
+function badge(t,c){return`<span class="badge" style="background:${c}22;color:${c};border:1px solid ${c}44"><span class="dot" style="background:${c}"></span>${esc(t)}</span>`;}
+function pill(t,c){return`<span class="pill" style="background:${c}22;color:${c}">${esc(t)}</span>`;}
+function dzBadge(z){return z==="field"?`<span class="pill" style="background:#f59e0b22;color:#f59e0b">🌍 Field</span>`:`<span class="pill" style="background:#22c55e22;color:#22c55e">🏢 On-Premises</span>`;}
+function armedBadge(a){return a?`<span class="armed-tag">🔫 Armed</span>`:`<span class="unarmed-tag">🛡 Unarmed</span>`;}
+function av(a,i){return`<div class="av" style="background:${AVC[(i||0)%AVC.length]}">${esc(a||"?")}</div>`;}
+function gi(g){return g==="male"?"👨":g==="female"?"👩":"🧑";}
+function ini(n){return(n||"?").trim().split(" ").map(p=>p[0]).join("").toUpperCase().slice(0,2);}
+function fmt(d){if(!d)return"—";try{return new Date(d).toLocaleDateString("en-GB",{day:"numeric",month:"short",year:"numeric"});}catch{return d;}}
+function fmtMon(d){if(!d)return"—";try{return new Date(d).toLocaleDateString("en-GB",{day:"numeric",month:"short"});}catch{return d;}}
+function isAdmin(){return S.profile?.role==="admin";}
+function isAcct(){return S.profile?.role==="accountant"||S.profile?.role==="admin";}
+function canEdit(){return isAdmin();}
+function offById(id){return S.officers.find(o=>o.id===id);}
+
+// ══════════════════════════════════════════════════════════════
+// LOADING / TOAST
+// ══════════════════════════════════════════════════════════════
+function showLoad(msg="Loading…"){const o=document.getElementById("loading-overlay");o.style.display="flex";document.getElementById("loading-msg").textContent=msg;}
+function hideLoad(){document.getElementById("loading-overlay").style.display="none";}
+let toastT;
+function toast(msg,type="s"){const el=document.getElementById("toast");el.className="show "+type;el.innerHTML=(type==="s"?"✓ ":type==="e"?"✗ ":type==="w"?"⚠ ":"ℹ ")+esc(msg);clearTimeout(toastT);toastT=setTimeout(()=>el.className="",4000);}
+
+// ══════════════════════════════════════════════════════════════
+// CLOCK
+// ══════════════════════════════════════════════════════════════
+function tick(){const n=new Date(),el=document.getElementById("clock");if(el)el.textContent=n.toLocaleTimeString("en-GB",{hour:"2-digit",minute:"2-digit",second:"2-digit"})+" · "+n.toLocaleDateString("en-GB",{weekday:"short",day:"numeric",month:"short"});}
+setInterval(tick,1000);tick();
+
+// ══════════════════════════════════════════════════════════════
+// SPLASH → BOOT
+// ══════════════════════════════════════════════════════════════
+window.addEventListener("load",()=>{
+  setTimeout(()=>{
+    const s=document.getElementById("splash");
+    s.classList.add("out");
+    setTimeout(()=>{s.style.display="none";bootApp();},700);
+  },2500);
+});
+
+async function bootApp(){
+  // load orgs for login dropdown
+  await loadOrgs();
+  const {data:{session}}=await sb.auth.getSession();
+  if(session){
+    await loadUserProfile(session.user);
+    if(S.profile&&S.profile.status==="approved"){
+      if(S.profile.role!=="admin"){launchApp();return;}
+    }
+    await sb.auth.signOut();
+  }
+  showAuth();
+}
+
+// ══════════════════════════════════════════════════════════════
+// ORGS
+// ══════════════════════════════════════════════════════════════
+async function loadOrgs(){
+  try{
+    const{data}=await sb.from("organisations").select("id,name,logo").order("name");
+    S.orgs=data||[];
+    renderOrgDropdown("",false);
+    renderOrgDropdownReg("",false);
+  }catch(e){console.error(e);}
+}
+
+// ── Login org search ──
+function renderOrgDropdown(q,show){
+  const dd=document.getElementById("org-dropdown");
+  if(!dd)return;
+  const filtered=S.orgs.filter(o=>!q||o.name.toLowerCase().includes(q.toLowerCase()));
+  dd.innerHTML=filtered.length===0
+    ?`<div style="padding:10px 14px;font-size:12px;color:var(--text3)">No organisations found</div>`
+    :filtered.map(o=>`<div onclick="selectOrg('${o.id}','${esc(o.name)}')" style="padding:10px 14px;font-size:13px;color:var(--text);cursor:pointer;display:flex;align-items:center;gap:10px;transition:background .15s" onmouseover="this.style.background='var(--bg3)'" onmouseout="this.style.background=''">${o.logo?`<img src="${o.logo}" style="width:22px;height:22px;border-radius:5px;object-fit:cover"/>`:`<span style="font-size:16px">🛡</span>`}<span>${esc(o.name)}</span></div>`).join("");
+  if(show)dd.style.display="block";
+}
+function showOrgDropdown(){renderOrgDropdown(document.getElementById("l-org-search")?.value||"",true);}
+function hideOrgDropdown(){const dd=document.getElementById("org-dropdown");if(dd)dd.style.display="none";}
+function filterOrgs(q){
+  renderOrgDropdown(q,true);
+  // clear selection if user is typing
+  document.getElementById("l-org").value="";
+}
+function selectOrg(id,name){
+  document.getElementById("l-org").value=id;
+  document.getElementById("l-org-search").value=name;
+  hideOrgDropdown();
+  // update auth logo
+  const org=S.orgs.find(o=>o.id===id);
+  if(org){
+    const ali=document.getElementById("a-logo-icon");
+    if(ali)ali.innerHTML=org.logo?`<img src="${org.logo}" style="width:100%;height:100%;object-fit:cover;border-radius:12px"/>`:"🛡";
+    document.getElementById("a-org-name").textContent=org.name.toUpperCase();
+  }
+}
+
+// ── Register org search ──
+function renderOrgDropdownReg(q,show){
+  const dd=document.getElementById("org-dropdown-reg");
+  if(!dd)return;
+  const filtered=S.orgs.filter(o=>!q||o.name.toLowerCase().includes(q.toLowerCase()));
+  dd.innerHTML=filtered.length===0
+    ?`<div style="padding:10px 14px;font-size:12px;color:var(--text3)">No organisations found</div>`
+    :filtered.map(o=>`<div onclick="selectOrgReg('${o.id}','${esc(o.name)}')" style="padding:10px 14px;font-size:13px;color:var(--text);cursor:pointer;display:flex;align-items:center;gap:10px;transition:background .15s" onmouseover="this.style.background='var(--bg3)'" onmouseout="this.style.background=''">${o.logo?`<img src="${o.logo}" style="width:22px;height:22px;border-radius:5px;object-fit:cover"/>`:`<span style="font-size:16px">🛡</span>`}<span>${esc(o.name)}</span></div>`).join("");
+  if(show)dd.style.display="block";
+}
+function showOrgDropdownReg(){renderOrgDropdownReg(document.getElementById("r-org-search")?.value||"",true);}
+function hideOrgDropdownReg(){const dd=document.getElementById("org-dropdown-reg");if(dd)dd.style.display="none";}
+function filterOrgsReg(q){renderOrgDropdownReg(q,true);document.getElementById("r-org-sel").value="";}
+function selectOrgReg(id,name){
+  document.getElementById("r-org-sel").value=id;
+  document.getElementById("r-org-search").value=name;
+  hideOrgDropdownReg();
+}
+
+// ══════════════════════════════════════════════════════════════
+// AUTH UI
+// ══════════════════════════════════════════════════════════════
+function showAuth(){
+  document.getElementById("app").style.display="none";
+  document.getElementById("auth").style.display="flex";
+  sp("login");
+}
+
+function sp(panel){
+  ["login","register","verify","pending"].forEach(id=>{
+    const el=document.getElementById("p-"+id);
+    if(el)el.style.display=id===panel?"block":"none";
+  });
+  if(panel==="login"){document.getElementById("lerr").style.display="none";}
+  if(panel==="register"){
+    document.getElementById("rerr").style.display="none";
+    selType("user");
+  }
+}
+
+function selType(t){
+  document.getElementById("r-type").value=t;
+  // Remove 'on' from all type cards
+  document.querySelectorAll(".type-card").forEach(c=>c.classList.remove("on"));
+  // Add 'on' to selected card
+  const ids={user:"tc-user",admin:"tc-admin",accountant:"tc-acct"};
+  const card=document.getElementById(ids[t]);
+  if(card)card.classList.add("on");
+  // Show/hide org fields based on type
+  const isAdminReg=t==="admin";
+  document.getElementById("r-org-create-wrap").style.display=isAdminReg?"block":"none";
+  document.getElementById("r-org-select-wrap").style.display=isAdminReg?"none":"block";
+  // Update sub-text
+  const sub=document.querySelector("#p-register .a-sub");
+  if(sub){
+    if(t==="admin")sub.textContent="Create a new organisation — you become the administrator";
+    else if(t==="accountant")sub.textContent="Join an organisation as accountant — payroll access";
+    else sub.textContent="Join an organisation — requires admin approval";
+  }
+}
+
+function handleLogoUpload(input){
+  const file=input.files[0];if(!file)return;
+  if(file.size>512000){toast("Logo must be under 500KB","w");return;}
+  const r=new FileReader();
+  r.onload=e=>{
+    S.logoBase64=e.target.result;
+    const prev=document.getElementById("logo-upload-preview");
+    prev.innerHTML=`<img src="${e.target.result}" style="width:100%;height:100%;object-fit:cover;border-radius:12px"/>`;
+  };
+  r.readAsDataURL(file);
+}
+
+function handleOrgLogoUpdate(input){
+  const file=input.files[0];if(!file)return;
+  if(file.size>512000){toast("Logo must be under 500KB","w");return;}
+  const r=new FileReader();
+  r.onload=async e=>{
+    const logo=e.target.result;
+    const prev=document.getElementById("org-logo-preview");
+    prev.innerHTML=`<img src="${logo}" style="width:100%;height:100%;object-fit:cover;border-radius:12px"/>`;
+    if(S.org){
+      await sb.from("organisations").update({logo}).eq("id",S.org.id);
+      S.org.logo=logo;
+      updateBranding();
+      toast("Logo updated");
+    }
+  };
+  r.readAsDataURL(file);
+}
+
+// auth error helpers
+function aerr(id,msg){const el=document.getElementById(id);el.textContent=msg;el.style.display="block";}
+
+// ══════════════════════════════════════════════════════════════
+// VERIFY CODE
+// ══════════════════════════════════════════════════════════════
+let cdInt=null;
+function genCode(){return String(Math.floor(100000+Math.random()*900000));}
+function startTimer(){
+  clearInterval(cdInt);
+  S.vExpiry=Date.now()+10*60*1000;
+  cdInt=setInterval(()=>{
+    const left=S.vExpiry-Date.now(),el=document.getElementById("v-timer");
+    if(!el){clearInterval(cdInt);return;}
+    if(left<=0){clearInterval(cdInt);el.textContent="EXPIRED";document.getElementById("v-btn").disabled=true;return;}
+    const m=Math.floor(left/60000),s=Math.floor((left%60000)/1000);
+    el.textContent=`${m}:${String(s).padStart(2,"0")}`;
+    el.style.color=left<120000?"var(--red)":"var(--yellow)";
+  },1000);
+}
+function cin(el,i){
+  el.value=el.value.replace(/\D/g,"").slice(-1);
+  if(el.value&&i<5)document.getElementById("ci"+(i+1)).focus();
+  const code=[0,1,2,3,4,5].map(j=>document.getElementById("ci"+j).value).join("");
+  if(code.length===6)doVerify();
+}
+function ckn(el,i,e){if(e.key==="Backspace"&&!el.value&&i>0)document.getElementById("ci"+(i-1)).focus();}
+
+// ══════════════════════════════════════════════════════════════
+// LOGIN
+// ══════════════════════════════════════════════════════════════
+async function doLogin(){
+  const orgId=document.getElementById("l-org").value;
+  const username=document.getElementById("l-user").value.trim();
+  const pass=document.getElementById("l-pass").value;
+  if(!orgId){aerr("lerr","Please search and select your organisation first.");return;}
+  if(!username||!pass){aerr("lerr","Please fill in all fields.");return;}
+  showLoad("Signing in…");
+  try{
+    // find email from profile
+    const{data:prof}=await sb.from("profiles")
+      .select("*").eq("username",username).eq("org_id",orgId).single();
+    if(!prof){hideLoad();aerr("lerr","Username not found in this organisation.");return;}
+    if(prof.status==="pending"){hideLoad();sp("pending");return;}
+    if(prof.status==="rejected"){hideLoad();aerr("lerr","Account not approved. Contact your admin.");return;}
+    const{error}=await sb.auth.signInWithPassword({email:prof.email,password:pass});
+    if(error){hideLoad();aerr("lerr","Incorrect password.");return;}
+    await loadUserProfile({id:prof.id,email:prof.email});
+    hideLoad();
+    if(S.profile?.role!=="admin"){
+      // save session for non-admins
+    }
+    launchApp();
+  }catch(e){hideLoad();aerr("lerr","Login failed. Please try again.");}
+}
+
+// ══════════════════════════════════════════════════════════════
+// REGISTER
+// ══════════════════════════════════════════════════════════════
+async function doRegister(){
+  const type=document.getElementById("r-type").value;
+  const name=document.getElementById("r-name").value.trim();
+  const username=document.getElementById("r-user").value.trim();
+  const gender=document.getElementById("r-gender").value;
+  const pass=document.getElementById("r-pass").value;
+  const orgName=document.getElementById("r-org-name")?.value.trim()||"";
+  const orgSelId=document.getElementById("r-org-sel")?.value||"";
+
+  if(!type){aerr("rerr","Please select an account type.");return;}
+  if(!name||!username||!gender||!pass){aerr("rerr","Please fill in all fields.");return;}
+  if(pass.length<6){aerr("rerr","Password must be at least 6 characters.");return;}
+  if(!/^[a-zA-Z0-9_]{3,20}$/.test(username)){aerr("rerr","Username: 3-20 chars, letters/numbers/underscore only.");return;}
+  if(type==="admin"&&!orgName){aerr("rerr","Please enter your organisation name.");return;}
+  if(type!=="admin"&&!orgSelId){aerr("rerr","Please select your organisation.");return;}
+
+  // Show what type was selected for confirmation
+  const typeLabel=type==="admin"?"Admin":type==="accountant"?"Accountant":"User";
+  showLoad(`Checking username (${typeLabel} account)…`);
+
+  // Check username uniqueness within org
+  if(type!=="admin"&&orgSelId){
+    const{data:existing}=await sb.from("profiles")
+      .select("id").eq("username",username).eq("org_id",orgSelId);
+    if(existing&&existing.length>0){
+      hideLoad();
+      aerr("rerr","Username already taken in this organisation. Choose another.");
+      return;
+    }
+  }
+  hideLoad();
+
+  S.pendingReg={name,username,gender,pass,type,orgName,orgSelId,logo:S.logoBase64};
+  S.vCode=genCode();
+  document.getElementById("v-code").textContent=S.vCode;
+
+  if(type==="admin"){
+    document.getElementById("v-sub").textContent=`Creating "${orgName}" — Admin account. Enter the code below to confirm setup.`;
+  } else if(type==="accountant"){
+    document.getElementById("v-sub").textContent="Accountant account — share this code with your admin, then enter it below.";
+  } else {
+    document.getElementById("v-sub").textContent="User account — share this code with your admin to verify your identity, then enter it below.";
+  }
+
+  [0,1,2,3,4,5].forEach(i=>{document.getElementById("ci"+i).value="";});
+  document.getElementById("verr").style.display="none";
+  document.getElementById("v-btn").disabled=false;
+  startTimer();
+  sp("verify");
+  setTimeout(()=>document.getElementById("ci0").focus(),100);
+}
+
+async function doVerify(){
+  if(Date.now()>(S.vExpiry||0)){aerr("verr","Code expired. Please register again.");return;}
+  const entered=[0,1,2,3,4,5].map(i=>document.getElementById("ci"+i).value).join("");
+  if(entered.length<6){aerr("verr","Please enter all 6 digits.");return;}
+  if(entered!==S.vCode){
+    document.getElementById("verr").textContent="Incorrect code. Try again.";
+    document.getElementById("verr").style.display="block";
+    [0,1,2,3,4,5].forEach(i=>{document.getElementById("ci"+i).value="";});
+    document.getElementById("ci0").focus();return;
+  }
+  clearInterval(cdInt);
+  showLoad("Creating account…");
+  try{
+    const reg=S.pendingReg;
+    const isAdmin=reg.type==="admin";
+
+    // Step 1: Create org if admin
+    let orgId=reg.orgSelId;
+    if(isAdmin){
+      const{data:newOrg,error:orgErr}=await sb.from("organisations")
+        .insert({name:reg.orgName,logo:reg.logo||null}).select().single();
+      if(orgErr)throw new Error("Could not create organisation: "+orgErr.message);
+      orgId=newOrg.id;
+    }
+    if(!orgId)throw new Error("No organisation selected.");
+
+    // Step 2: Create Supabase auth user
+    const email=`${reg.username}__${orgId}@sentinel-ops.internal`;
+    const{data:authData,error:authErr}=await sb.auth.signUp({
+      email,
+      password:reg.pass,
+      options:{data:{display_name:reg.name,org_id:orgId,role:reg.type}}
+    });
+    if(authErr)throw new Error("Auth error: "+authErr.message);
+
+    // Supabase may return user immediately or require email confirm
+    // We handle both cases
+    const uid=authData?.user?.id;
+    if(!uid)throw new Error("Account creation failed — no user ID returned. Check Supabase Auth settings: go to Authentication → Email → disable 'Confirm email'.");
+
+    // Step 3: Insert profile with correct role
+    const{error:profErr}=await sb.from("profiles").insert({
+      id:uid,
+      org_id:orgId,
+      username:reg.username,
+      display_name:reg.name,
+      gender:reg.gender,
+      role:reg.type,          // admin / user / accountant
+      status:isAdmin?"approved":"pending",
+      email
+    });
+    if(profErr)throw new Error("Profile error: "+profErr.message);
+
+    // Step 4: Notify admins if not first admin
+    if(!isAdmin){
+      await sb.from("notifications").insert({
+        org_id:orgId,
+        message:`New ${reg.type} registration: ${reg.name} (@${reg.username}) awaiting approval.`,
+        type:"registration",
+        read:false
+      }).catch(()=>{});
+    }
+
+    hideLoad();
+
+    if(isAdmin){
+      // Sign in immediately
+      const{error:signinErr}=await sb.auth.signInWithPassword({email,password:reg.pass});
+      if(signinErr)throw new Error("Sign in failed: "+signinErr.message);
+      await loadUserProfile({id:uid,email});
+      if(!S.profile){
+        // Profile may take a moment — retry once
+        await new Promise(r=>setTimeout(r,1000));
+        await loadUserProfile({id:uid,email});
+      }
+      launchApp();
+    } else {
+      sp("pending");
+      toast("Registration submitted! Awaiting admin approval.","i");
+    }
+  }catch(e){
+    hideLoad();
+    console.error("Registration error:",e);
+    aerr("verr",e.message||"Registration failed. Please try again.");
+  }
+}
+
+// ══════════════════════════════════════════════════════════════
+// LOAD USER PROFILE + ORG DATA
+// ══════════════════════════════════════════════════════════════
+async function loadUserProfile(user){
+  S.user=user;
+  // Retry up to 3 times in case profile insert hasn't propagated yet
+  for(let i=0;i<3;i++){
+    const{data:prof}=await sb.from("profiles").select("*").eq("id",user.id).single();
+    if(prof){
+      S.profile=prof;
+      break;
+    }
+    await new Promise(r=>setTimeout(r,800));
+  }
+  if(S.profile?.org_id){
+    const{data:org}=await sb.from("organisations").select("*").eq("id",S.profile.org_id).single();
+    S.org=org;
+  }
+}
+
+async function loadOrgData(){
+  if(!S.org?.id)return;
+  showLoad("Loading data…");
+  const oid=S.org.id;
+  try{
+    const[offs,tsks,depls,dlogs,plogs,notifs,rates]=await Promise.all([
+      sb.from("officers").select("*").eq("org_id",oid).order("name"),
+      sb.from("tasks").select("*").eq("org_id",oid).order("created_at",{ascending:false}),
+      sb.from("deployments").select("*").eq("org_id",oid).order("created_at",{ascending:false}),
+      sb.from("duty_logs").select("*").eq("org_id",oid).order("confirmed_at",{ascending:false}).limit(200),
+      sb.from("patrol_logs").select("*").eq("org_id",oid).order("logged_at",{ascending:false}).limit(500),
+      sb.from("notifications").select("*").eq("org_id",oid).order("created_at",{ascending:false}).limit(50),
+      sb.from("pay_rates").select("*").eq("org_id",oid),
+    ]);
+    S.officers=offs.data||[];
+    S.tasks=tsks.data||[];
+    S.deployments=depls.data||[];
+    S.dutyLogs=dlogs.data||[];
+    S.patrolLogs=plogs.data||[];
+    S.notifications=notifs.data||[];
+    S.payRates=rates.data||[];
+  }catch(e){console.error(e);}
+  hideLoad();
+}
+
+// ══════════════════════════════════════════════════════════════
+// LAUNCH APP
+// ══════════════════════════════════════════════════════════════
+async function launchApp(){
+  document.getElementById("auth").style.display="none";
+  document.getElementById("app").style.display="block";
+  updateTopbar();
+  await loadOrgData();
+  nav("dashboard");
+  // realtime subscription
+  sb.channel("org-changes")
+    .on("postgres_changes",{event:"*",schema:"public",table:"officers",filter:`org_id=eq.${S.org?.id}`},()=>reloadTable("officers"))
+    .on("postgres_changes",{event:"*",schema:"public",table:"tasks",filter:`org_id=eq.${S.org?.id}`},()=>reloadTable("tasks"))
+    .on("postgres_changes",{event:"*",schema:"public",table:"notifications",filter:`org_id=eq.${S.org?.id}`},()=>reloadNotifs())
+    .subscribe();
+}
+
+async function reloadTable(t){
+  const oid=S.org?.id;if(!oid)return;
+  if(t==="officers"){const{data}=await sb.from("officers").select("*").eq("org_id",oid).order("name");S.officers=data||[];}
+  if(t==="tasks"){const{data}=await sb.from("tasks").select("*").eq("org_id",oid).order("created_at",{ascending:false});S.tasks=data||[];}
+  render();
+}
+async function reloadNotifs(){
+  const{data}=await sb.from("notifications").select("*").eq("org_id",S.org?.id).eq("read",false);
+  S.notifications=data||[];
+  updateBell();
+  if(isAdmin()&&S.notifications.length>0)toast(`🔔 ${S.notifications.length} new notification${S.notifications.length>1?"s":""}!`,"w");
+}
+
+function updateBell(){
+  const unread=S.notifications.filter(n=>!n.read).length;
+  const bell=document.getElementById("bell");
+  const cnt=document.getElementById("bell-cnt");
+  if(isAdmin()&&unread>0){bell.style.display="block";cnt.textContent=unread;}
+  else bell.style.display="none";
+}
+
+function updateTopbar(){
+  const p=S.profile,o=S.org;
+  document.getElementById("tb-org").textContent=(o?.name||"Sentinel Ops").toUpperCase();
+  document.getElementById("uav").textContent=ini(p?.display_name||p?.username||"?");
+  document.getElementById("uname").textContent=p?.display_name||p?.username||"—";
+  document.getElementById("urole").textContent=p?.role==="admin"?"Administrator":p?.role==="accountant"?"Accountant":"User";
+  // show/hide nav items
+  document.querySelectorAll(".admin-only").forEach(el=>el.style.display=isAdmin()?"":"none");
+  document.querySelectorAll(".acct-only").forEach(el=>el.style.display=isAcct()?"":"none");
+  // logo
+  const tbLogo=document.getElementById("tb-logo");
+  if(o?.logo)tbLogo.innerHTML=`<img src="${o.logo}" style="width:100%;height:100%;object-fit:cover;border-radius:8px"/>`;
+  else tbLogo.textContent="🛡";
+  updateBell();
+  updateBranding();
+}
+
+function updateBranding(){
+  const o=S.org;
+  // auth screen logo
+  const ali=document.getElementById("a-logo-icon");
+  if(ali){ali.innerHTML=o?.logo?`<img src="${o.logo}" style="width:100%;height:100%;object-fit:cover;border-radius:12px"/>`:"🛡";}
+  document.getElementById("a-org-name").textContent=(o?.name||"SENTINEL OPS").toUpperCase();
+}
+
+async function doLogout(){
+  await sb.auth.signOut();
+  S.user=null;S.profile=null;S.org=null;
+  S.officers=[];S.tasks=[];S.deployments=[];
+  document.getElementById("app").style.display="none";
+  await loadOrgs();
+  showAuth();
+}
+
+// ══════════════════════════════════════════════════════════════
+// NAV
+// ══════════════════════════════════════════════════════════════
+document.getElementById("nav").addEventListener("click",e=>{const b=e.target.closest(".nb");if(b&&b.dataset.v)nav(b.dataset.v);});
+function nav(v){
+  S.view=v;S.selOfficer=null;S.selPremise=null;S.officerSearch="";
+  document.querySelectorAll(".nb").forEach(b=>b.classList.toggle("on",b.dataset.v===v));
+  render();
+}
+
+// ══════════════════════════════════════════════════════════════
+// RENDER ROUTER
+// ══════════════════════════════════════════════════════════════
+function render(){
+  const m=document.getElementById("main");
+  const v=S.view;
+  if(v==="dashboard")m.innerHTML=renderDash();
+  else if(v==="officers")m.innerHTML=renderOfficers();
+  else if(v==="duty")m.innerHTML=renderDuty();
+  else if(v==="tasks")m.innerHTML=renderTasks();
+  else if(v==="deployments")m.innerHTML=renderDeployments();
+  else if(v==="premises")m.innerHTML=renderPremises();
+  else if(v==="schedule")m.innerHTML=renderSchedule();
+  else if(v==="payroll")m.innerHTML=isAcct()?renderPayroll():`<div class="readonly-notice" style="margin-top:40px">🔒 Payroll access restricted to Accountants only.</div>`;
+  else if(v==="users")m.innerHTML=isAdmin()?renderUsers():`<div class="readonly-notice" style="margin-top:40px">Access denied.</div>`;
+}
+
+// ══════════════════════════════════════════════════════════════
+// DASHBOARD
+// ══════════════════════════════════════════════════════════════
+function renderDash(){
+  const u=S.profile;
+  const active=S.officers.filter(o=>o.status==="On Duty"||o.status==="On Patrol").length;
+  const inProg=S.tasks.filter(t=>t.status==="In Progress").length;
+  const done=S.tasks.filter(t=>t.status==="Completed").length;
+  const awol=S.officers.filter(o=>o.status==="AWOL").length;
+  const onLeave=S.officers.filter(o=>o.status==="Leave"||o.status==="Paid Leave").length;
+  const males=S.officers.filter(o=>o.gender==="male").length;
+  const females=S.officers.filter(o=>o.gender==="female").length;
+  const armed=S.officers.filter(o=>o.armed).length;
+  const pendingCount=0; // fetched via notifications
+  const unread=S.notifications.filter(n=>!n.read).length;
+  const todayDuty=S.dutyLogs.filter(d=>{
+    const t=new Date();const dd=new Date(d.confirmed_at);
+    return dd.toDateString()===t.toDateString();
+  });
+  const pendDepl=S.deployments.filter(d=>d.status==="pending").length;
+  const topTasks=S.tasks.filter(t=>t.status!=="Completed").slice(0,5);
+  const activeOff=S.officers.filter(o=>o.status==="On Duty"||o.status==="On Patrol");
+
+  return`
+<div class="st">Operations Overview</div>
+<div class="ss">Welcome back, <strong style="color:#fff">${esc(u?.display_name||u?.username||"")}</strong> · ${esc(S.org?.name||"")}${u?.role==="admin"?` <span style="color:var(--accent3)">· Administrator</span>`:u?.role==="accountant"?` <span style="color:var(--gold)">· Accountant</span>`:""}</div>
+
+${isAdmin()&&unread>0?`<div style="background:#1e3a5f33;border:1px solid var(--accent2)44;border-radius:11px;padding:11px 16px;margin-bottom:16px;display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap"><span style="font-size:12px;color:var(--accent3)">🔔 <strong>${unread}</strong> new notification${unread>1?"s":""}</span><button class="btn bp bsm" onclick="nav('users')">Review →</button></div>`:""}
+
+<div class="sg">
+  ${[{l:"Active Officers",v:active,a:"var(--green)",i:"👮"},{l:"Total Officers",v:S.officers.length,a:"var(--accent2)",i:"🧑‍✈️"},{l:"Tasks Active",v:inProg,a:"var(--yellow)",i:"📋"},{l:"Pending Deployments",v:pendDepl,a:"var(--purple)",i:"🚀"}]
+  .map(s=>`<div class="sc" style="border:1px solid ${s.a}33"><div class="sa" style="background:${s.a}"></div><div style="font-size:20px;margin-bottom:8px">${s.i}</div><div class="sn">${s.v}</div><div class="sl">${s.l}</div></div>`).join("")}
+</div>
+
+<div class="g3">
+  <div class="card">
+    <div class="card-title">👥 Personnel Breakdown</div>
+    <div style="display:flex;gap:10px;margin-bottom:12px">
+      <div style="flex:1;text-align:center;padding:10px;background:#3b82f622;border-radius:9px"><div style="font-size:22px">👨</div><div style="font-family:'Courier New',monospace;font-size:22px;font-weight:800;color:#fff">${males}</div><div style="font-size:10px;color:var(--text3)">MALE</div></div>
+      <div style="flex:1;text-align:center;padding:10px;background:#f43f5e22;border-radius:9px"><div style="font-size:22px">👩</div><div style="font-family:'Courier New',monospace;font-size:22px;font-weight:800;color:#fff">${females}</div><div style="font-size:10px;color:var(--text3)">FEMALE</div></div>
+    </div>
+    <div style="display:flex;gap:8px">
+      <div style="flex:1;padding:8px;background:var(--red)11;border:1px solid var(--red)33;border-radius:8px;display:flex;justify-content:space-between;align-items:center"><span style="font-size:11px;color:#fca5a5">🔫 Armed</span><span style="font-family:'Courier New',monospace;font-size:16px;font-weight:800;color:var(--red)">${armed}</span></div>
+      <div style="flex:1;padding:8px;background:var(--green)11;border:1px solid var(--green)33;border-radius:8px;display:flex;justify-content:space-between;align-items:center"><span style="font-size:11px;color:#86efac">🛡 Unarmed</span><span style="font-family:'Courier New',monospace;font-size:16px;font-weight:800;color:var(--green)">${S.officers.length-armed}</span></div>
+    </div>
+  </div>
+  <div class="card">
+    <div class="card-title">⚠️ Absences</div>
+    <div style="display:flex;flex-direction:column;gap:7px">
+      <div style="display:flex;justify-content:space-between;align-items:center;padding:8px 10px;background:var(--red)11;border:1px solid var(--red)33;border-radius:8px"><span style="font-size:11px;color:#fca5a5;font-weight:600">🚨 AWOL</span><span style="font-family:'Courier New',monospace;font-size:20px;font-weight:800;color:var(--red)">${awol}</span></div>
+      <div style="display:flex;justify-content:space-between;align-items:center;padding:8px 10px;background:var(--purple)11;border:1px solid var(--purple)33;border-radius:8px"><span style="font-size:11px;color:#c4b5fd;font-weight:600">🏖 On Leave</span><span style="font-family:'Courier New',monospace;font-size:20px;font-weight:800;color:var(--purple)">${onLeave}</span></div>
+    </div>
+  </div>
+  <div class="card">
+    <div class="card-title">✅ Today's Duty Confirmations</div>
+    <div style="font-family:'Courier New',monospace;font-size:36px;font-weight:800;color:#fff;text-align:center;padding:10px 0">${todayDuty.length}</div>
+    <div style="font-size:11px;color:var(--text3);text-align:center">officers confirmed duty today</div>
+    <div style="text-align:center;margin-top:10px"><button class="btn bp bsm" onclick="nav('duty')">View Duty Log →</button></div>
+  </div>
+</div>
+
+<div class="g2">
+  <div class="card">
+    <div class="card-title"><span>Active Officers</span><span style="cursor:pointer;color:var(--accent3);font-size:11px" onclick="nav('officers')">View All →</span></div>
+    ${activeOff.length===0?`<div style="color:var(--text3);font-size:12px;text-align:center;padding:16px">No officers currently on duty</div>`:
+    activeOff.map((o,i)=>`<div class="orow" onclick="nav('officers')">${av(ini(o.name),i)}<div style="flex:1;min-width:0"><div style="font-size:13px;font-weight:600;color:#fff">${esc(o.name)}</div><div style="font-size:11px;color:var(--text3)">${gi(o.gender)} ${esc(o.role)} · ${esc(o.zone||"—")} ${dzBadge(o.depzone)}</div></div>${badge(o.status,SC[o.status])} ${armedBadge(o.armed)}</div>`).join("")}
+  </div>
+  <div class="card">
+    <div class="card-title"><span>Priority Tasks</span><span style="cursor:pointer;color:var(--accent3);font-size:11px" onclick="nav('tasks')">View All →</span></div>
+    ${topTasks.length===0?`<div style="color:var(--text3);font-size:12px;text-align:center;padding:16px">No pending tasks</div>`:
+    topTasks.map(t=>{const o=offById(t.assigned_to);return`<div class="orow" style="cursor:default"><div style="width:3px;height:36px;border-radius:3px;background:${PC[t.priority]};flex-shrink:0"></div><div style="flex:1;min-width:0"><div style="font-size:13px;font-weight:600;color:#fff;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(t.title)}</div><div style="font-size:11px;color:var(--text3)">${o?esc(o.name):"Unassigned"}${t.due?` · Due ${esc(t.due)}`:""}</div></div>${pill(t.status,TC[t.status])}</div>`;}).join("")}
+  </div>
+</div>`;
+}
+
+// ══════════════════════════════════════════════════════════════
+// OFFICERS
+// ══════════════════════════════════════════════════════════════
+function renderOfficers(){
+  const admin=canEdit();
+  const q=S.officerSearch.toLowerCase();
+  const filtered=S.officers.filter(o=>
+    (!q||o.name.toLowerCase().includes(q))&&
+    (S.filterShift==="All"||o.shift===S.filterShift)&&
+    (S.filterRole==="All"||o.role===S.filterRole)&&
+    (S.filterDepzone==="All"||o.depzone===S.filterDepzone)&&
+    (S.filterArmed==="All"||(S.filterArmed==="armed"?o.armed:!o.armed))
+  );
+  const shiftBtns=["All",...SHIFTS].map(s=>`<button class="btn bsm ${S.filterShift===s?"bp":"bs"}" onclick="setF('shift','${s}')">${s}</button>`).join("");
+  const roleBtns=["All",...ROLES].map(r=>`<button class="btn bsm ${S.filterRole===r?"bp":"bs"}" onclick="setF('role','${r}')">${r}</button>`).join("");
+  const dzBtns=`<button class="btn bsm ${S.filterDepzone==="All"?"bp":"bs"}" onclick="setF('depzone','All')">All</button><button class="btn bsm ${S.filterDepzone==="on-premise"?"bp":"bs"}" onclick="setF('depzone','on-premise')">🏢 On-Premises</button><button class="btn bsm ${S.filterDepzone==="field"?"bp":"bs"}" onclick="setF('depzone','field')">🌍 Field</button>`;
+  const armedBtns=`<button class="btn bsm ${S.filterArmed==="All"?"bp":"bs"}" onclick="setF('armed','All')">All</button><button class="btn bsm ${S.filterArmed==="armed"?"bp":"bs"}" onclick="setF('armed','armed')">🔫 Armed</button><button class="btn bsm ${S.filterArmed==="unarmed"?"bp":"bs"}" onclick="setF('armed','unarmed')">🛡 Unarmed</button>`;
+  const cards=filtered.map((o,i)=>{
+    const sel=S.selOfficer===o.id;
+    const oTasks=S.tasks.filter(t=>t.assigned_to===o.id);
+    return`<div class="oc${sel?" sel":""}" onclick="selOff(${o.id},event)">
+      <div class="och">${av(ini(o.name),i)}<div style="flex:1;min-width:0"><div style="font-size:14px;font-weight:700;color:#fff">${esc(o.name)}</div><div style="font-size:11px;color:var(--text3)">${gi(o.gender)} ${esc(o.role)}</div></div>${badge(o.status,SC[o.status])}</div>
+      <div style="display:flex;gap:5px;flex-wrap:wrap;margin-bottom:8px">${pill("⏰ "+o.shift,"#64748b")} ${dzBadge(o.depzone)} ${pill("📍 "+(o.zone||"No post"),"#475569")} ${armedBadge(o.armed)}</div>
+      ${o.armed&&o.weapon_type?`<div style="font-size:10px;color:var(--red);margin-bottom:6px">🔫 ${esc(o.weapon_type)} · ${esc(o.weapon_serial||"No serial")} · ${esc(o.ammo_type||"—")} · <strong>${o.ammo_count||0} rds</strong></div>`:""}
+      ${sel?renderOfficerExpanded(o,oTasks,admin):""}
+    </div>`;
+  }).join("")||`<div style="color:var(--text3);padding:20px;text-align:center">No officers found.</div>`;
+  return`
+<div class="sh"><div><div class="st">Officers</div><div class="ss">${filtered.length} officer${filtered.length!==1?"s":""} · ${S.officers.length} total</div></div>${admin?`<button class="btn bp" onclick="openOfficerModal()">+ Add Officer</button>`:""}</div>
+${!admin?`<div class="readonly-notice" style="margin-bottom:12px">👁 View-only</div>`:""}
+<div class="sbar"><input placeholder="Search officers by name…" value="${esc(S.officerSearch)}" oninput="S.officerSearch=this.value;render()"/></div>
+<div class="fb">${shiftBtns}<div class="fsep"></div>${roleBtns}<div class="fsep"></div>${dzBtns}<div class="fsep"></div>${armedBtns}</div>
+<div class="og">${cards}</div>`;
+}
+
+function renderOfficerExpanded(o,oTasks,admin){
+  const sBtns=admin?STATUSES.map(s=>`<button class="btn bxs ${o.status===s?"bp":"bs"}" onclick="updOfficerStatus(${o.id},'${s}',event)">${s}</button>`).join(""):`<div class="readonly-notice">Status — admin only</div>`;
+  const tRows=oTasks.map(t=>`<div class="tmini"><span style="font-size:12px;color:var(--text)">${esc(t.title)}</span>${pill(t.status,TC[t.status])}</div>`).join("");
+  return`<div class="exp" onclick="event.stopPropagation()">
+    ${admin?`<div class="el">📍 Location / Post</div><div style="margin-bottom:10px"><input list="zle-${o.id}" value="${esc(o.zone==="—"?"":o.zone||"")}" placeholder="Type location…" oninput="updOfficerZone(${o.id},this.value)" onclick="event.stopPropagation()"/><datalist id="zle-${o.id}"><option value="Gate A"/><option value="Gate B"/><option value="Perimeter"/><option value="Control Room"/><option value="Office"/><option value="Parking Lot"/><option value="Main Entrance"/></datalist></div>
+    <div class="el">Deployment Zone</div><div class="sbtns" style="margin-bottom:10px"><button class="btn bxs ${o.depzone==="on-premise"?"bp":"bs"}" onclick="updOfficerDepzone(${o.id},'on-premise',event)">🏢 On-Premises</button><button class="btn bxs ${o.depzone==="field"?"bp":"bs"}" onclick="updOfficerDepzone(${o.id},'field',event)">🌍 Field</button></div>`:""}
+    <div class="el">Status</div><div class="sbtns">${sBtns}</div>
+    ${oTasks.length>0?`<div class="el">Tasks</div>${tRows}`:""}
+    ${admin?`<div style="border-top:1px solid var(--border);padding-top:10px;margin-top:8px;display:flex;gap:6px">
+      <button class="btn bw bsm" style="flex:1" onclick="openOfficerModal(${o.id},event)">✏️ Edit</button>
+      <button class="btn bd bsm" style="flex:1" onclick="delOfficer(${o.id},event)">🗑 Remove</button>
+    </div>`:""}
+  </div>`;
+}
+
+// ══════════════════════════════════════════════════════════════
+// DUTY LOG
+// ══════════════════════════════════════════════════════════════
+function renderDuty(){
+  const today=new Date().toDateString();
+  const todayLogs=S.dutyLogs.filter(d=>new Date(d.confirmed_at).toDateString()===today);
+  const confirmedIds=new Set(todayLogs.map(d=>d.officer_id));
+  const unconfirmed=S.officers.filter(o=>!confirmedIds.has(o.id)&&(o.status==="On Duty"||o.status==="On Patrol"));
+  return`
+<div class="sh"><div><div class="st">Duty Log</div><div class="ss">Officer duty confirmation and patrol tracking</div></div></div>
+<div class="g2">
+  <div class="card">
+    <div class="card-title">⚠️ Unconfirmed (On Duty Today)</div>
+    ${unconfirmed.length===0?`<div style="color:var(--green);font-size:12px;text-align:center;padding:16px">✓ All active officers have confirmed duty</div>`:""}
+    ${unconfirmed.map((o,i)=>`<div class="duty-card">
+      <div style="display:flex;align-items:center;gap:10px">
+        ${av(ini(o.name),i)}<div style="flex:1"><div style="font-size:13px;font-weight:600;color:#fff">${esc(o.name)}</div><div style="font-size:11px;color:var(--text3)">${esc(o.role)} · ${esc(o.shift)} Shift</div></div>
+        ${badge(o.status,SC[o.status])}
+        ${canEdit()?`<button class="btn bg bsm" onclick="openDutyModal(${o.id})">✓ Confirm</button>`:""}
+      </div>
+    </div>`).join("")}
+  </div>
+  <div class="card">
+    <div class="card-title">✅ Confirmed Today (${todayLogs.length})</div>
+    ${todayLogs.length===0?`<div style="color:var(--text3);font-size:12px;text-align:center;padding:16px">No confirmations yet today</div>`:""}
+    ${todayLogs.map(d=>{const o=offById(d.officer_id);return`<div class="duty-card confirmed">
+      <div style="display:flex;align-items:center;gap:10px">
+        ${av(ini(o?.name||"?"),0)}<div style="flex:1"><div style="font-size:13px;font-weight:600;color:#fff">${esc(o?.name||"Unknown")}</div><div style="font-size:11px;color:var(--text3)">${esc(d.shift)} · ${new Date(d.confirmed_at).toLocaleTimeString("en-GB",{hour:"2-digit",minute:"2-digit"})}</div>${d.notes?`<div style="font-size:10px;color:var(--text3);margin-top:3px;font-style:italic">${esc(d.notes)}</div>`:""}</div>
+        <div style="text-align:right">
+          <div style="font-size:10px;color:var(--green);font-weight:700">✓ Confirmed</div>
+          ${canEdit()?`<button class="btn bp bxs" style="margin-top:4px" onclick="openPatrolModal(${d.id},${d.officer_id})">+ Patrol</button>`:""}
+        </div>
+      </div>
+      ${renderPatrolsForDuty(d.id)}
+    </div>`;}).join("")}
+  </div>
+</div>
+
+<div class="card" style="margin-top:16px">
+  <div class="card-title">📋 Recent Duty History</div>
+  <table class="ut">
+    <thead><tr><th>Officer</th><th>Shift</th><th>Date/Time</th><th>Patrols</th><th>Notes</th></tr></thead>
+    <tbody>
+      ${S.dutyLogs.slice(0,30).map(d=>{
+        const o=offById(d.officer_id);
+        const patrols=S.patrolLogs.filter(p=>p.duty_log_id===d.id).length;
+        return`<tr><td>${esc(o?.name||"Unknown")}</td><td>${pill(d.shift,"#64748b")}</td><td>${fmtMon(d.confirmed_at)} ${new Date(d.confirmed_at).toLocaleTimeString("en-GB",{hour:"2-digit",minute:"2-digit"})}</td><td>${patrols>0?`<span style="color:var(--accent3)">${patrols} round${patrols>1?"s":""}</span>`:"—"}</td><td style="color:var(--text3);font-size:11px">${esc(d.notes||"—")}</td></tr>`;
+      }).join("")}
+    </tbody>
+  </table>
+</div>`;
+}
+
+function renderPatrolsForDuty(dutyId){
+  const patrols=S.patrolLogs.filter(p=>p.duty_log_id===dutyId);
+  if(patrols.length===0)return"";
+  return`<div class="patrol-log"><div style="font-size:10px;color:var(--accent3);font-weight:700;margin-bottom:6px">PATROL ROUNDS (${patrols.length})</div>${patrols.map(p=>`<div style="display:flex;gap:8px;padding:3px 0;border-bottom:1px solid var(--border)22"><span style="color:var(--text3);">${new Date(p.logged_at).toLocaleTimeString("en-GB",{hour:"2-digit",minute:"2-digit"})}</span><span>📍 ${esc(p.location||"—")}</span>${p.notes?`<span style="color:var(--text3);font-style:italic">${esc(p.notes)}</span>`:""}</div>`).join("")}</div>`;
+}
+
+// ══════════════════════════════════════════════════════════════
+// TASKS
+// ══════════════════════════════════════════════════════════════
+function renderTasks(){
+  const admin=canEdit();
+  const pend=S.tasks.filter(t=>t.status==="Pending").length;
+  const prog=S.tasks.filter(t=>t.status==="In Progress").length;
+  const done=S.tasks.filter(t=>t.status==="Completed").length;
+  const rows=S.tasks.map(t=>{
+    const o=offById(t.assigned_to);
+    const opts=TASK_S.map(s=>`<option${t.status===s?" selected":""}>${s}</option>`).join("");
+    return`<div class="tr"><div class="tb2" style="background:${PC[t.priority]}"></div>
+      <div style="flex:1;min-width:0">
+        <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-bottom:3px"><span style="font-size:13px;font-weight:700;color:#fff">${esc(t.title)}</span>${pill(t.priority,PC[t.priority])}${pill(t.category,"#475569")}</div>
+        <div style="font-size:11px;color:var(--text3)">Assigned: <span style="color:var(--text2)">${o?esc(o.name):"Unassigned"}</span>${t.due?` · Due: <span style="color:var(--text2)">${esc(t.due)}</span>`:""}</div>
+      </div>
+      <div style="display:flex;gap:5px;align-items:center;flex-shrink:0">
+        ${badge(t.status,TC[t.status])}
+        ${admin?`<select style="width:auto;padding:5px 8px;font-size:11px" onchange="updTaskStatus(${t.id},this.value)">${opts}</select>
+        <button class="btn bs bxs" onclick="openEditTask(${t.id})">✏️</button>
+        <button class="btn bd bxs" onclick="delTask(${t.id})">🗑</button>`:""}
+      </div>
+    </div>`;
+  }).join("");
+  return`
+<div class="sh"><div><div class="st">Tasks & Duties</div><div class="ss">Manage officer duty assignments</div></div>${admin?`<button class="btn bp" onclick="openAddTask()">+ Assign Task</button>`:""}</div>
+${!admin?`<div class="readonly-notice" style="margin-bottom:14px">👁 View-only</div>`:""}
+<div class="tstat">
+  <div class="tsc"><span style="color:var(--text3);font-size:11px">Pending</span><span style="font-family:'Courier New',monospace;font-size:20px;font-weight:800;color:var(--yellow)">${pend}</span></div>
+  <div class="tsc"><span style="color:var(--text3);font-size:11px">In Progress</span><span style="font-family:'Courier New',monospace;font-size:20px;font-weight:800;color:var(--accent2)">${prog}</span></div>
+  <div class="tsc"><span style="color:var(--text3);font-size:11px">Completed</span><span style="font-family:'Courier New',monospace;font-size:20px;font-weight:800;color:var(--green)">${done}</span></div>
+</div>
+<div style="display:flex;flex-direction:column;gap:8px">${rows||`<div style="color:var(--text3);text-align:center;padding:24px">No tasks yet.</div>`}</div>`;
+}
+
+// ══════════════════════════════════════════════════════════════
+// DEPLOYMENTS
+// ══════════════════════════════════════════════════════════════
+function renderDeployments(){
+  const admin=canEdit();
+  let depls=S.deployments;
+  if(S.deplFilter!=="all")depls=depls.filter(d=>d.status===S.deplFilter);
+  if(S.deplDate)depls=depls.filter(d=>d.date===S.deplDate);
+  if(S.deplLoc)depls=depls.filter(d=>(d.location||"").toLowerCase().includes(S.deplLoc.toLowerCase()));
+  const rows=depls.map(d=>{
+    const o=offById(d.officer_id);
+    return`<div class="dc">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:10px;flex-wrap:wrap;margin-bottom:6px">
+        <div style="flex:1"><div style="font-size:14px;font-weight:700;color:#fff;margin-bottom:4px">${esc(d.title)}</div>
+        <div style="font-size:11px;color:var(--text3);display:flex;gap:10px;flex-wrap:wrap">
+          <span>👮 ${o?esc(o.name)+" "+gi(o.gender||""):"Unassigned"}</span>
+          <span>📍 ${esc(d.location||"—")}</span>
+          <span>📅 ${fmt(d.date)}</span>
+          <span>⏰ ${esc(d.time||"—")}</span>
+          ${d.depzone?dzBadge(d.depzone):""}
+        </div>
+        ${d.notes?`<div style="font-size:11px;color:var(--text3);margin-top:4px;font-style:italic">${esc(d.notes)}</div>`:""}
+        </div>
+        <div style="display:flex;flex-direction:column;gap:5px;align-items:flex-end">
+          ${badge(d.status.charAt(0).toUpperCase()+d.status.slice(1),DC[d.status]||"#64748b")}
+          ${admin?`<div style="display:flex;gap:5px"><button class="btn bs bxs" onclick="cycleDeplStatus(${d.id})">↻</button><button class="btn bd bxs" onclick="delDepl(${d.id})">🗑</button></div>`:""}
+        </div>
+      </div>
+    </div>`;
+  }).join("")||`<div style="color:var(--text3);text-align:center;padding:28px">No deployments found.</div>`;
+  return`
+<div class="sh"><div><div class="st">Deployments</div><div class="ss">Track all officer deployments</div></div>${admin?`<button class="btn bp" onclick="openDeplModal()">+ New Deployment</button>`:""}</div>
+<div style="display:flex;gap:10px;margin-bottom:14px;flex-wrap:wrap">
+  <input type="date" style="width:auto;padding:7px 10px;font-size:12px" value="${esc(S.deplDate)}" onchange="S.deplDate=this.value;render()"/>
+  <input placeholder="🔍 Search by location…" style="flex:1;min-width:160px;padding:7px 10px;font-size:12px" value="${esc(S.deplLoc)}" oninput="S.deplLoc=this.value;render()"/>
+  ${S.deplDate||S.deplLoc?`<button class="btn bs bsm" onclick="S.deplDate='';S.deplLoc='';render()">✕ Clear</button>`:""}
+</div>
+<div class="ts">
+  ${["all","pending","active","completed"].map(f=>`<button class="dtab${S.deplFilter===f?" on":""}" onclick="S.deplFilter='${f}';render()">${f.charAt(0).toUpperCase()+f.slice(1)} (${f==="all"?S.deployments.length:S.deployments.filter(d=>d.status===f).length})</button>`).join("")}
+</div>${rows}`;
+}
+
+// ══════════════════════════════════════════════════════════════
+// PREMISES
+// ══════════════════════════════════════════════════════════════
+function renderPremises(){
+  const zones=[...new Set(S.officers.map(o=>o.zone).filter(z=>z&&z!=="—"&&z))];
+  if(zones.length===0)return`<div class="st">Premises</div><div class="ss">Locations with assigned officers</div><div style="color:var(--text3);text-align:center;padding:40px;background:var(--bg2);border:1px solid var(--border);border-radius:13px">No premises yet. Add officers with locations.</div>`;
+  const cards=zones.map(zone=>{
+    const offs=S.officers.filter(o=>o.zone===zone);
+    const activeCount=offs.filter(o=>o.status==="On Duty"||o.status==="On Patrol").length;
+    const exp=S.selPremise===zone;
+    const dz=offs[0]?.depzone||"on-premise";
+    return`<div class="prc${exp?" exp":""}" onclick="S.selPremise=S.selPremise===\`${zone.replace(/`/g,"")}\`?null:\`${zone.replace(/`/g,"")}\`;render()">
+      <div style="display:flex;align-items:center;gap:12px;margin-bottom:10px">
+        <div style="width:40px;height:40px;border-radius:10px;background:${dz==="field"?"#f59e0b22":"#22c55e22"};border:1px solid ${dz==="field"?"#f59e0b44":"#22c55e44"};display:flex;align-items:center;justify-content:center;font-size:20px;flex-shrink:0">${dz==="field"?"🌍":"🏢"}</div>
+        <div style="flex:1"><div style="font-size:15px;font-weight:700;color:#fff">${esc(zone)}</div><div style="font-size:11px;color:var(--text3)">${offs.length} officer${offs.length!==1?"s":""} · ${activeCount} active</div></div>
+        <div style="font-size:10px;color:var(--text3)">${exp?"▲":"▼"}</div>
+      </div>
+      <div style="display:flex;gap:5px;flex-wrap:wrap">
+        ${offs.map(o=>badge(o.status,SC[o.status])).join(" ")}
+      </div>
+      ${exp?`<div style="border-top:1px solid var(--border);margin-top:12px;padding-top:12px">
+        ${offs.map((o,i)=>`<div class="orow" style="cursor:default">${av(ini(o.name),i)}<div style="flex:1;min-width:0"><div style="font-size:13px;font-weight:600;color:#fff">${esc(o.name)}</div><div style="font-size:11px;color:var(--text3)">${gi(o.gender)} ${esc(o.role)} · ${esc(o.shift)} ${armedBadge(o.armed)}</div></div>${badge(o.status,SC[o.status])}</div>`).join("")}
+      </div>`:""}
+    </div>`;
+  }).join("");
+  return`<div class="st">Premises</div><div class="ss">Click a location to see assigned officers</div><div class="prg">${cards}</div>`;
+}
+
+// ══════════════════════════════════════════════════════════════
+// SCHEDULE (Monthly Calendar)
+// ══════════════════════════════════════════════════════════════
+function renderSchedule(){
+  const m=S.schedMonth;
+  const year=m.getFullYear(),mon=m.getMonth();
+  const firstDay=new Date(year,mon,1).getDay();
+  const daysInMonth=new Date(year,mon+1,0).getDate();
+  const today=new Date();
+  const monthName=m.toLocaleDateString("en-GB",{month:"long",year:"numeric"});
+  let calHtml=`<div class="cal-grid">`;
+  ["Sun","Mon","Tue","Wed","Thu","Fri","Sat"].forEach(d=>{calHtml+=`<div class="cal-day header">${d}</div>`;});
+  for(let i=0;i<firstDay;i++)calHtml+=`<div class="cal-day" style="opacity:.2"></div>`;
+  for(let d=1;d<=daysInMonth;d++){
+    const date=new Date(year,mon,d);
+    const isToday=date.toDateString()===today.toDateString();
+    // find duty logs for this day
+    const dayLogs=S.dutyLogs.filter(dl=>{
+      const dd=new Date(dl.confirmed_at);
+      return dd.getFullYear()===year&&dd.getMonth()===mon&&dd.getDate()===d;
+    });
+    const shifts={Morning:0,Evening:0,Night:0};
+    dayLogs.forEach(dl=>{if(shifts[dl.shift]!==undefined)shifts[dl.shift]++;});
+    calHtml+=`<div class="cal-day${isToday?" today":""}">
+      <div style="font-size:11px;font-weight:${isToday?"700":"400"};color:${isToday?"var(--accent3)":"var(--text2)"};">${d}</div>
+      ${shifts.Morning>0?`<div class="cal-dot" style="background:var(--yellow)" title="${shifts.Morning} Morning"></div>`:""}
+      ${shifts.Evening>0?`<div class="cal-dot" style="background:var(--accent2)" title="${shifts.Evening} Evening"></div>`:""}
+      ${shifts.Night>0?`<div class="cal-dot" style="background:var(--purple)" title="${shifts.Night} Night"></div>`:""}
+      ${dayLogs.length>0?`<div style="font-size:9px;color:var(--green)">${dayLogs.length}</div>`:""}
+    </div>`;
+  }
+  calHtml+=`</div>`;
+
+  // Shift schedule
+  const shiftCards=SHIFTS.map(shift=>{
+    const offs=S.officers.filter(o=>o.shift===shift);
+    const cards=offs.length===0?`<div style="color:var(--text3);font-size:11px">No officers</div>`:
+      offs.map((o,i)=>`<div class="card" style="padding:11px 13px;display:flex;align-items:center;gap:9px">${av(ini(o.name),i)}<div style="flex:1;min-width:0"><div style="font-size:13px;font-weight:600;color:#fff">${esc(o.name)}</div><div style="font-size:10px;color:var(--text3)">${gi(o.gender)} ${esc(o.role)}</div><div style="font-size:10px;color:var(--text3)">📍 ${esc(o.zone||"—")} ${dzBadge(o.depzone)}</div></div>${badge(o.status,SC[o.status])}</div>`).join("");
+    return`<div><div class="shdr"><div style="font-size:15px;font-weight:700;color:#fff">${shift} Shift</div><div class="sdiv"></div><div style="font-size:11px;color:var(--text3)">${offs.length}</div></div><div class="scg">${cards}</div></div>`;
+  }).join("");
+
+  return`
+<div class="sh">
+  <div><div class="st">Work Schedule</div><div class="ss">Monthly duty calendar and shift assignments</div></div>
+  <div style="display:flex;gap:8px;align-items:center">
+    <button class="btn bs bsm" onclick="S.schedMonth=new Date(${year},${mon-1},1);render()">← Prev</button>
+    <span style="font-size:13px;font-weight:700;color:#fff">${monthName}</span>
+    <button class="btn bs bsm" onclick="S.schedMonth=new Date(${year},${mon+1},1);render()">Next →</button>
+  </div>
+</div>
+<div class="card" style="margin-bottom:20px">
+  <div class="card-title">📅 ${monthName} — Duty Confirmations</div>
+  <div style="display:flex;gap:16px;margin-bottom:12px;flex-wrap:wrap">
+    <div style="display:flex;align-items:center;gap:6px"><div style="width:10px;height:10px;border-radius:50%;background:var(--yellow)"></div><span style="font-size:11px;color:var(--text3)">Morning</span></div>
+    <div style="display:flex;align-items:center;gap:6px"><div style="width:10px;height:10px;border-radius:50%;background:var(--accent2)"></div><span style="font-size:11px;color:var(--text3)">Evening</span></div>
+    <div style="display:flex;align-items:center;gap:6px"><div style="width:10px;height:10px;border-radius:50%;background:var(--purple)"></div><span style="font-size:11px;color:var(--text3)">Night</span></div>
+  </div>
+  ${calHtml}
+</div>
+${shiftCards}`;
+}
+
+// ══════════════════════════════════════════════════════════════
+// PAYROLL (Accountant only)
+// ══════════════════════════════════════════════════════════════
+function renderPayroll(){
+  const now=new Date();
+  const month=now.toLocaleDateString("en-GB",{month:"long",year:"numeric"});
+  // calc payroll summary
+  let totalGross=0;
+  const rows=S.officers.map((o,i)=>{
+    const rate=S.payRates.find(r=>r.officer_id===o.id);
+    if(!rate)return{o,rate:null,monthly:0};
+    let monthly=0;
+    const base=parseFloat(rate.base_rate)||0;
+    if(rate.scale==="hourly")monthly=base*8*22;
+    else if(rate.scale==="daily")monthly=base*22;
+    else if(rate.scale==="monthly")monthly=base;
+    else if(rate.scale==="yearly")monthly=base/12;
+    // count working days from attendance
+    const workDays=S.dutyLogs.filter(d=>{
+      const dd=new Date(d.confirmed_at);
+      return d.officer_id===o.id&&dd.getMonth()===now.getMonth()&&dd.getFullYear()===now.getFullYear();
+    }).length;
+    totalGross+=monthly;
+    return{o,rate,monthly,workDays,base};
+  });
+
+  const payRows=rows.map(({o,rate,monthly,workDays,base},i)=>`
+    <div class="paycard${!rate?" ":monthly>0?" highlight":""}" >
+      <div style="display:flex;align-items:center;gap:12px;margin-bottom:10px">
+        ${av(ini(o.name),i)}
+        <div style="flex:1"><div style="font-size:14px;font-weight:700;color:#fff">${esc(o.name)}</div><div style="font-size:11px;color:var(--text3)">${gi(o.gender)} ${esc(o.role)} · ${esc(o.shift)} Shift</div></div>
+        <button class="btn bw bsm" onclick="openRateModal(${o.id})">💰 Set Rate</button>
+      </div>
+      ${rate?`
+      <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px">
+        <div style="background:var(--bg3);border-radius:8px;padding:8px;text-align:center"><div style="font-size:10px;color:var(--text3)">SCALE</div><div style="font-size:12px;font-weight:700;color:var(--accent3)">${rate.scale.toUpperCase()}</div></div>
+        <div style="background:var(--bg3);border-radius:8px;padding:8px;text-align:center"><div style="font-size:10px;color:var(--text3)">BASE RATE</div><div style="font-size:12px;font-weight:700;color:#fff">${rate.currency} ${parseFloat(rate.base_rate||0).toFixed(2)}</div></div>
+        <div style="background:var(--bg3);border-radius:8px;padding:8px;text-align:center"><div style="font-size:10px;color:var(--text3)">DAYS (MTD)</div><div style="font-size:12px;font-weight:700;color:var(--green)">${workDays}</div></div>
+        <div style="background:var(--gold)11;border:1px solid var(--gold)33;border-radius:8px;padding:8px;text-align:center"><div style="font-size:10px;color:var(--gold)">MONTHLY EST.</div><div style="font-size:12px;font-weight:700;color:var(--gold)">${rate.currency} ${monthly.toFixed(2)}</div></div>
+      </div>
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-top:8px;padding-top:8px;border-top:1px solid var(--border)33">
+        <span style="font-size:11px;color:var(--text3)">OT Rate: ${rate.currency} ${parseFloat(rate.overtime_rate||0).toFixed(2)}/hr · Payday: ${rate.payday_date||"—"}${rate.payday_date?ordinal(rate.payday_date)+" of each month":""}</span>
+      </div>`:`<div style="font-size:12px;color:var(--text3);font-style:italic">No rate configured — click "Set Rate" to add</div>`}
+    </div>`).join("");
+
+  return`
+<div class="sh">
+  <div><div class="st">💼 Payroll & Accounts</div><div class="ss">${month} · Restricted to Accountant access only</div></div>
+  <button class="btn bp" onclick="openBulkRateModal()">📋 Bulk Set Rates</button>
+</div>
+<div style="background:var(--gold)11;border:1px solid var(--gold)33;border-radius:13px;padding:16px 20px;margin-bottom:20px;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px">
+  <div><div style="font-size:12px;color:var(--gold)">TOTAL ESTIMATED PAYROLL — ${month.toUpperCase()}</div><div style="font-family:'Courier New',monospace;font-size:32px;font-weight:800;color:var(--gold)">${S.payRates[0]?.currency||"USD"} ${totalGross.toFixed(2)}</div></div>
+  <div style="text-align:right"><div style="font-size:11px;color:var(--text3)">${S.officers.length} officers · ${S.payRates.length} rated</div><div style="font-size:11px;color:var(--text3);margin-top:4px">${S.officers.length-S.payRates.length} without rate</div></div>
+</div>
+${payRows}`;
+}
+
+function ordinal(n){const s=["th","st","nd","rd"];const v=n%100;return n+(s[(v-20)%10]||s[v]||s[0]);}
+
+// ══════════════════════════════════════════════════════════════
+// USERS (Admin)
+// ══════════════════════════════════════════════════════════════
+async function renderUsers(){
+  // mark notifs read
+  if(S.notifications.filter(n=>!n.read).length>0){
+    await sb.from("notifications").update({read:true}).eq("org_id",S.org?.id);
+    S.notifications.forEach(n=>n.read=true);
+    updateBell();
+  }
+  // load all profiles for this org
+  const{data:profiles}=await sb.from("profiles").select("*").eq("org_id",S.org?.id).order("created_at");
+  const pending=(profiles||[]).filter(p=>p.status==="pending");
+  const approved=(profiles||[]).filter(p=>p.status==="approved");
+  const recentNotifs=S.notifications.slice(0,5);
+
+  function pRow(p,actions){
+    return`<tr><td><div style="display:flex;align-items:center;gap:8px"><div class="av" style="width:28px;height:28px;border-radius:7px;font-size:10px;background:linear-gradient(135deg,var(--accent),var(--accent2))">${esc(ini(p.display_name||p.username))}</div><div><div style="font-weight:600;color:#fff;font-size:12px">${esc(p.display_name||p.username)}</div><div style="font-size:10px;color:var(--text3)">@${esc(p.username)} ${p.gender?`· ${gi(p.gender)}`:""}</div></div></div></td>
+    <td>${pill(p.role==="admin"?"Admin":p.role==="accountant"?"Accountant":"User",p.role==="admin"?"#3b82f6":p.role==="accountant"?"#fbbf24":"#64748b")} ${p.status==="approved"?pill("✓ Approved","#22c55e"):pill("Pending","#f59e0b")}</td>
+    <td>${actions}</td></tr>`;
+  }
+
+  const pRows=pending.length===0?`<tr><td colspan="3" style="color:var(--text3);padding:14px;text-align:center;font-size:12px">No pending requests</td></tr>`:
+    pending.map(p=>pRow(p,`<div style="display:flex;gap:5px"><button class="btn bg bxs" onclick="approveUser('${p.id}')">✓ Approve</button><button class="btn bd bxs" onclick="rejectUser('${p.id}')">✗ Reject</button></div>`)).join("");
+  const aRows=approved.map(p=>{
+    const isMe=p.id===S.user?.id;
+    const actions=isMe?`<span style="font-size:10px;color:var(--text3)">You</span>`:
+      `<div style="display:flex;gap:5px">
+        <select style="width:auto;padding:4px 8px;font-size:10px" onchange="changeRole('${p.id}',this.value)"><option${p.role==="user"?" selected":""} value="user">User</option><option${p.role==="admin"?" selected":""} value="admin">Admin</option><option${p.role==="accountant"?" selected":""} value="accountant">Accountant</option></select>
+        <button class="btn bd bxs" onclick="removeUser('${p.id}')">Remove</button>
+      </div>`;
+    return pRow(p,actions);
+  }).join("");
+
+  return`
+<div class="st">User Management</div>
+<div class="ss">Manage access for ${S.org?.name||"your organisation"}</div>
+${recentNotifs.length>0?`<div class="card" style="margin-bottom:18px"><div class="card-title">🔔 Recent Activity</div>${recentNotifs.map(n=>`<div style="padding:8px 0;border-bottom:1px solid var(--border)33;display:flex;gap:10px"><span style="font-size:16px">📋</span><div><div style="font-size:12px;color:var(--text)">${esc(n.message)}</div><div style="font-size:10px;color:var(--text3);margin-top:2px">${fmt(n.created_at)}</div></div></div>`).join("")}</div>`:""}
+${pending.length>0?`<div style="margin-bottom:20px"><div style="font-size:13px;font-weight:700;color:var(--yellow);margin-bottom:10px">⏳ Pending Approval (${pending.length})</div><div class="card" style="padding:0;overflow:hidden"><table class="ut"><thead><tr><th>User</th><th>Role</th><th>Actions</th></tr></thead><tbody>${pRows}</tbody></table></div></div>`:""}
+<div><div style="font-size:13px;font-weight:700;color:var(--text2);margin-bottom:10px">✓ Approved Accounts (${approved.length})</div><div class="card" style="padding:0;overflow:hidden"><table class="ut"><thead><tr><th>User</th><th>Role</th><th>Actions</th></tr></thead><tbody>${aRows}</tbody></table></div></div>`;
+}
+
+// ══════════════════════════════════════════════════════════════
+// ACTIONS
+// ══════════════════════════════════════════════════════════════
+
+// ── Officers ──
+function openOfficerModal(id,e){
+  if(e)e.stopPropagation();
+  if(!canEdit())return;
+  const o=id?S.officers.find(x=>x.id===id):null;
+  document.getElementById("om-title").textContent=o?"Edit Officer":"Add Officer";
+  document.getElementById("o-id").value=o?.id||"";
+  document.getElementById("o-name").value=o?.name||"";
+  document.getElementById("o-gender").value=o?.gender||"male";
+  document.getElementById("o-role").value=o?.role||"Field Officer";
+  document.getElementById("o-shift").value=o?.shift||"Morning";
+  document.getElementById("o-depzone").value=o?.depzone||"on-premise";
+  document.getElementById("o-zone").value=o?.zone&&o.zone!=="—"?o.zone:"";
+  document.getElementById("o-status").value=o?.status||"Off Duty";
+  document.getElementById("o-armed").value=o?.armed?"armed":"unarmed";
+  document.getElementById("o-wtype").value=o?.weapon_type||"";
+  document.getElementById("o-wserial").value=o?.weapon_serial||"";
+  document.getElementById("o-atype").value=o?.ammo_type||"";
+  document.getElementById("o-acount").value=o?.ammo_count||"";
+  toggleWeapon(o?.armed?"armed":"unarmed");
+  om("m-officer");
+}
+function toggleWeapon(val){document.getElementById("weapon-fields").style.display=val==="armed"?"block":"none";}
+async function submitOfficer(){
+  const name=document.getElementById("o-name").value.trim();
+  if(!name){toast("Please enter officer name","e");return;}
+  const armed=document.getElementById("o-armed").value==="armed";
+  const data={
+    org_id:S.org.id,name,gender:document.getElementById("o-gender").value,
+    role:document.getElementById("o-role").value,shift:document.getElementById("o-shift").value,
+    depzone:document.getElementById("o-depzone").value,
+    zone:document.getElementById("o-zone").value.trim()||"—",
+    status:document.getElementById("o-status").value,
+    avatar:ini(name),armed,
+    weapon_type:armed?document.getElementById("o-wtype").value.trim()||null:null,
+    weapon_serial:armed?document.getElementById("o-wserial").value.trim()||null:null,
+    ammo_type:armed?document.getElementById("o-atype").value.trim()||null:null,
+    ammo_count:armed?parseInt(document.getElementById("o-acount").value)||0:0,
+  };
+  const id=document.getElementById("o-id").value;
+  showLoad(id?"Updating officer…":"Adding officer…");
+  if(id){await sb.from("officers").update(data).eq("id",id);}
+  else{await sb.from("officers").insert(data);}
+  await reloadTable("officers");
+  hideLoad();cm("m-officer");
+  toast(id?"Officer updated":"Officer added");
+}
+async function updOfficerStatus(id,status,e){if(e)e.stopPropagation();if(!canEdit())return;await sb.from("officers").update({status}).eq("id",id);await reloadTable("officers");toast("Status updated");}
+async function updOfficerZone(id,v){if(!canEdit())return;await sb.from("officers").update({zone:v.trim()||"—"}).eq("id",id);}
+async function updOfficerDepzone(id,v,e){if(e)e.stopPropagation();if(!canEdit())return;await sb.from("officers").update({depzone:v}).eq("id",id);await reloadTable("officers");toast("Zone updated");}
+function delOfficer(id,e){if(e)e.stopPropagation();const o=offById(id);if(!o)return;confirm2("Remove Officer?",`<strong style="color:#fff">${esc(o.name)}</strong> will be permanently removed.`,async()=>{await sb.from("officers").delete().eq("id",id);await reloadTable("officers");toast("Officer removed");});}
+
+// ── Tasks ──
+function openAddTask(){
+  if(!canEdit())return;
+  document.getElementById("tm-title").textContent="Assign New Task";
+  document.getElementById("t-id").value="";
+  document.getElementById("t-title").value="";
+  document.getElementById("t-due").value="";
+  document.getElementById("t-pri").value="Medium";
+  document.getElementById("t-cat").value="Security";
+  document.getElementById("t-save").textContent="Assign";
+  document.getElementById("t-save").onclick=submitTask;
+  document.getElementById("t-off").innerHTML=`<option value="">Unassigned</option>`+S.officers.map(o=>`<option value="${o.id}">${esc(o.name)}</option>`).join("");
+  om("m-task");
+}
+function openEditTask(id){
+  if(!canEdit())return;
+  const t=S.tasks.find(x=>x.id===id);if(!t)return;
+  document.getElementById("tm-title").textContent="Edit Task";
+  document.getElementById("t-id").value=t.id;
+  document.getElementById("t-title").value=t.title;
+  document.getElementById("t-due").value=t.due||"";
+  document.getElementById("t-pri").value=t.priority;
+  document.getElementById("t-cat").value=t.category;
+  document.getElementById("t-save").textContent="Save Changes";
+  document.getElementById("t-save").onclick=submitTask;
+  document.getElementById("t-off").innerHTML=`<option value="">Unassigned</option>`+S.officers.map(o=>`<option value="${o.id}"${t.assigned_to===o.id?" selected":""}>${esc(o.name)}</option>`).join("");
+  om("m-task");
+}
+async function submitTask(){
+  const title=document.getElementById("t-title").value.trim();
+  if(!title){toast("Please enter a task title","e");return;}
+  const aTo=document.getElementById("t-off").value?parseInt(document.getElementById("t-off").value):null;
+  const data={org_id:S.org.id,title,priority:document.getElementById("t-pri").value,assigned_to:aTo,due:document.getElementById("t-due").value,category:document.getElementById("t-cat").value};
+  const id=document.getElementById("t-id").value;
+  showLoad(id?"Saving…":"Assigning…");
+  if(id){await sb.from("tasks").update(data).eq("id",id);}
+  else{await sb.from("tasks").insert({...data,status:"Pending"});}
+  await reloadTable("tasks");hideLoad();cm("m-task");toast(id?"Task updated":"Task assigned");
+}
+async function updTaskStatus(id,status){if(!canEdit())return;await sb.from("tasks").update({status}).eq("id",id);await reloadTable("tasks");toast("Task updated");}
+function delTask(id){const t=S.tasks.find(x=>x.id===id);if(!t)return;confirm2("Delete Task?",`Delete <strong style="color:#fff">${esc(t.title)}</strong>?`,async()=>{await sb.from("tasks").delete().eq("id",id);await reloadTable("tasks");toast("Task deleted");});}
+
+// ── Deployments ──
+function openDeplModal(){
+  if(!canEdit())return;
+  document.getElementById("d-title").value="";
+  document.getElementById("d-loc").value="";
+  document.getElementById("d-date").value=new Date().toISOString().split("T")[0];
+  document.getElementById("d-time").value="";
+  document.getElementById("d-notes").value="";
+  document.getElementById("d-status").value="pending";
+  document.getElementById("d-off").innerHTML=`<option value="">Unassigned</option>`+S.officers.map(o=>`<option value="${o.id}">${esc(o.name)} ${gi(o.gender||"")}</option>`).join("");
+  om("m-depl");
+}
+async function submitDepl(){
+  const title=document.getElementById("d-title").value.trim();
+  const loc=document.getElementById("d-loc").value.trim();
+  if(!title||!loc){toast("Title and location required","e");return;}
+  const oId=document.getElementById("d-off").value?parseInt(document.getElementById("d-off").value):null;
+  const o=oId?offById(oId):null;
+  showLoad("Saving deployment…");
+  await sb.from("deployments").insert({org_id:S.org.id,title,officer_id:oId,officer_name:o?.name||"Unassigned",gender:o?.gender||"",location:loc,date:document.getElementById("d-date").value,time:document.getElementById("d-time").value,depzone:document.getElementById("d-zone").value,status:document.getElementById("d-status").value,notes:document.getElementById("d-notes").value.trim()});
+  const{data}=await sb.from("deployments").select("*").eq("org_id",S.org.id).order("created_at",{ascending:false});
+  S.deployments=data||[];
+  hideLoad();cm("m-depl");toast("Deployment saved");render();
+}
+async function cycleDeplStatus(id){
+  const d=S.deployments.find(x=>x.id===id);if(!d)return;
+  const c=["pending","active","completed"];
+  const next=c[(c.indexOf(d.status)+1)%c.length];
+  await sb.from("deployments").update({status:next}).eq("id",id);
+  d.status=next;toast("Status → "+next);render();
+}
+function delDepl(id){confirm2("Delete Deployment?","This deployment will be permanently removed.",async()=>{await sb.from("deployments").delete().eq("id",id);S.deployments=S.deployments.filter(x=>x.id!==id);toast("Deleted");render();});}
+
+// ── Duty ──
+function openDutyModal(officerId){
+  const o=offById(officerId);
+  document.getElementById("duty-officer-name").textContent=o?.name||"Officer";
+  document.getElementById("duty-officer-id").value=officerId;
+  document.getElementById("duty-shift").value=o?.shift||"Morning";
+  document.getElementById("duty-notes").value="";
+  om("m-duty");
+}
+async function confirmDuty(){
+  const offId=parseInt(document.getElementById("duty-officer-id").value);
+  const shift=document.getElementById("duty-shift").value;
+  const notes=document.getElementById("duty-notes").value.trim();
+  showLoad("Confirming duty…");
+  const{data}=await sb.from("duty_logs").insert({org_id:S.org.id,officer_id:offId,shift,notes,patrol_count:0}).select().single();
+  S.dutyLogs.unshift(data);
+  hideLoad();cm("m-duty");toast("Duty confirmed ✓","s");render();
+}
+function openPatrolModal(dutyId,officerId){
+  document.getElementById("patrol-duty-id").value=dutyId;
+  document.getElementById("patrol-officer-id").value=officerId;
+  document.getElementById("patrol-loc").value="";
+  document.getElementById("patrol-notes").value="";
+  om("m-patrol");
+}
+async function logPatrol(){
+  const dutyId=parseInt(document.getElementById("patrol-duty-id").value);
+  const offId=parseInt(document.getElementById("patrol-officer-id").value);
+  const loc=document.getElementById("patrol-loc").value.trim();
+  const notes=document.getElementById("patrol-notes").value.trim();
+  showLoad("Logging patrol…");
+  const{data}=await sb.from("patrol_logs").insert({org_id:S.org.id,officer_id:offId,duty_log_id:dutyId,location:loc,notes}).select().single();
+  S.patrolLogs.unshift(data);
+  hideLoad();cm("m-patrol");toast("Patrol round logged","s");render();
+}
+
+// ── Payroll ──
+function openRateModal(officerId){
+  if(!isAcct())return;
+  const rate=S.payRates.find(r=>r.officer_id===officerId);
+  const o=offById(officerId);
+  document.getElementById("rate-title").textContent=`Pay Rate — ${o?.name||"Officer"}`;
+  document.getElementById("rate-sub").textContent=`Configure compensation for ${o?.name||"this officer"}`;
+  document.getElementById("rate-officer-id").value=officerId;
+  document.getElementById("rate-base").value=rate?.base_rate||"";
+  document.getElementById("rate-ot").value=rate?.overtime_rate||"";
+  document.getElementById("rate-payday").value=rate?.payday_date||"25";
+  document.getElementById("rate-currency").value=rate?.currency||"USD";
+  // set scale
+  const scale=rate?.scale||"daily";
+  document.getElementById("rate-scale").value=scale;
+  document.querySelectorAll("#rate-scale-btns .rs-btn").forEach(b=>{b.classList.toggle("on",b.dataset.scale===scale);});
+  om("m-rate");
+}
+function selScale(btn){
+  document.querySelectorAll("#rate-scale-btns .rs-btn").forEach(b=>b.classList.remove("on"));
+  btn.classList.add("on");
+  document.getElementById("rate-scale").value=btn.dataset.scale;
+}
+async function submitRate(){
+  const offId=parseInt(document.getElementById("rate-officer-id").value);
+  const data={
+    org_id:S.org.id,officer_id:offId,
+    scale:document.getElementById("rate-scale").value,
+    base_rate:parseFloat(document.getElementById("rate-base").value)||0,
+    overtime_rate:parseFloat(document.getElementById("rate-ot").value)||0,
+    currency:document.getElementById("rate-currency").value,
+    payday_date:parseInt(document.getElementById("rate-payday").value)||25,
+  };
+  showLoad("Saving rate…");
+  const existing=S.payRates.find(r=>r.officer_id===offId);
+  if(existing){await sb.from("pay_rates").update(data).eq("officer_id",offId).eq("org_id",S.org.id);}
+  else{await sb.from("pay_rates").insert(data);}
+  const{data:rates}=await sb.from("pay_rates").select("*").eq("org_id",S.org.id);
+  S.payRates=rates||[];
+  hideLoad();cm("m-rate");toast("Rate saved");render();
+}
+function openBulkRateModal(){
+  // For now, just open the first officer — can be expanded
+  if(S.officers.length>0)openRateModal(S.officers[0].id);
+}
+
+// ── Users ──
+async function approveUser(id){await sb.from("profiles").update({status:"approved"}).eq("id",id);toast("User approved","s");nav("users");}
+async function rejectUser(id){await sb.from("profiles").update({status:"rejected"}).eq("id",id);toast("User rejected","e");nav("users");}
+async function changeRole(id,role){await sb.from("profiles").update({role}).eq("id",id);toast("Role updated");nav("users");}
+async function removeUser(id){confirm2("Remove User?","This account will be removed.",async()=>{await sb.from("profiles").delete().eq("id",id);toast("Account removed");nav("users");});}
+
+// ── Profile ──
+function openProfile(){
+  const p=S.profile,o=S.org;
+  document.getElementById("prof-av").textContent=ini(p?.display_name||p?.username||"?");
+  document.getElementById("prof-name").textContent=p?.display_name||p?.username||"—";
+  document.getElementById("prof-meta").textContent=`@${p?.username||"—"} · ${p?.role==="admin"?"Administrator":p?.role==="accountant"?"Accountant":"User"}`;
+  document.getElementById("p-dname").value=p?.display_name||"";
+  document.getElementById("p-orgname").value=o?.name||"";
+  const orgWrap=document.getElementById("org-settings-wrap");
+  orgWrap.style.display=isAdmin()?"block":"none";
+  // show logo in profile
+  const lp=document.getElementById("org-logo-preview");
+  if(o?.logo)lp.innerHTML=`<img src="${o.logo}" style="width:100%;height:100%;object-fit:cover;border-radius:12px"/>`;
+  else lp.innerHTML=`<span style="font-size:24px">📷</span>`;
+  om("m-profile");
+}
+async function saveProfile(){
+  const dname=document.getElementById("p-dname").value.trim();
+  if(!dname){toast("Name cannot be empty","e");return;}
+  showLoad("Saving…");
+  await sb.from("profiles").update({display_name:dname}).eq("id",S.user.id);
+  S.profile.display_name=dname;
+  if(isAdmin()){
+    const orgName=document.getElementById("p-orgname").value.trim();
+    if(orgName&&orgName!==S.org.name){
+      await sb.from("organisations").update({name:orgName}).eq("id",S.org.id);
+      S.org.name=orgName;
+    }
+  }
+  hideLoad();updateTopbar();cm("m-profile");toast("Profile saved");
+}
+
+// ── Misc ──
+function setF(t,v){if(t==="shift")S.filterShift=v;else if(t==="role")S.filterRole=v;else if(t==="depzone")S.filterDepzone=v;else S.filterArmed=v;render();}
+function selOff(id,e){if(e&&e.target.closest(".exp"))return;S.selOfficer=S.selOfficer===id?null:id;render();}
+function om(id){document.getElementById(id).style.display="flex";}
+function cm(id){document.getElementById(id).style.display="none";}
+function confirm2(title,text,fn){
+  document.getElementById("conf-title").textContent=title;
+  document.getElementById("conf-text").innerHTML=text;
+  document.getElementById("conf-yes").onclick=()=>{fn();cm("m-confirm");};
+  om("m-confirm");
+}
+document.addEventListener("keydown",e=>{if(e.key==="Escape")["m-officer","m-task","m-depl","m-confirm","m-profile","m-duty","m-patrol","m-rate"].forEach(cm);});
+</script>
+</body>
+</html>
